@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from "livekit-client";
 import { STANCE_OPTIONS } from "@/utils/constants";
+import VideoTile from "./VideoTile";
+import DebateChat from "./DebateChat";
 
 interface DebateUser {
   id: string;
@@ -31,8 +35,23 @@ export default function DebateRoom({
   userA,
   userB,
 }: DebateRoomProps) {
+  const router = useRouter();
   const [debateTime, setDebateTime] = useState(0);
   const [isActive, setIsActive] = useState(status === "active");
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCamOn, setIsCamOn] = useState(true);
+  const [showChat, setShowChat] = useState(true);
+  const [devMode, setDevMode] = useState(false);
+  const [connectionState, setConnectionState] = useState<string>("disconnected");
+
+  // LiveKit state
+  const [localVideoTrack, setLocalVideoTrack] = useState<LocalTrack | null>(null);
+  const [remoteVideoTrack, setRemoteVideoTrack] = useState<RemoteTrack | null>(null);
+  const localAudioTrackRef = useRef<LocalTrack | null>(null);
+  const [isOpponentMuted, setIsOpponentMuted] = useState(false);
+  const [isOpponentCamOff, setIsOpponentCamOff] = useState(true);
+
+  const roomRef = useRef<Room | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isUserA = currentUserId === userA.id;
@@ -55,17 +74,171 @@ export default function DebateRoom({
     };
   }, [isActive]);
 
+  // Connect to LiveKit room
+  useEffect(() => {
+    if (!isActive) return;
+
+    let cancelled = false;
+
+    const connect = async () => {
+      try {
+        // Get token from API
+        const res = await fetch("/api/livekit/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ debateId }),
+        });
+
+        const data = await res.json();
+
+        if (data.devMode) {
+          setDevMode(true);
+          setConnectionState("dev-mode");
+          return;
+        }
+
+        if (!data.token || cancelled) return;
+
+        const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+        if (!livekitUrl) {
+          setDevMode(true);
+          setConnectionState("dev-mode");
+          return;
+        }
+
+        // Create and connect to room
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true,
+        });
+
+        roomRef.current = room;
+
+        // Handle remote tracks
+        room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+          if (track.kind === Track.Kind.Video) {
+            setRemoteVideoTrack(track);
+            setIsOpponentCamOff(false);
+          }
+        });
+
+        room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+          if (track.kind === Track.Kind.Video) {
+            setRemoteVideoTrack(null);
+            setIsOpponentCamOff(true);
+          }
+        });
+
+        room.on(RoomEvent.TrackMuted, (publication) => {
+          if (publication.track?.kind === Track.Kind.Audio && !publication.isLocal) {
+            setIsOpponentMuted(true);
+          }
+          if (publication.track?.kind === Track.Kind.Video && !publication.isLocal) {
+            setIsOpponentCamOff(true);
+          }
+        });
+
+        room.on(RoomEvent.TrackUnmuted, (publication) => {
+          if (publication.track?.kind === Track.Kind.Audio && !publication.isLocal) {
+            setIsOpponentMuted(false);
+          }
+          if (publication.track?.kind === Track.Kind.Video && !publication.isLocal) {
+            setIsOpponentCamOff(false);
+          }
+        });
+
+        room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
+          setConnectionState(state);
+        });
+
+        room.on(RoomEvent.Disconnected, () => {
+          setConnectionState("disconnected");
+        });
+
+        // Connect
+        await room.connect(livekitUrl, data.token);
+        setConnectionState("connected");
+
+        // Publish local tracks
+        if (!cancelled) {
+          await room.localParticipant.enableCameraAndMicrophone();
+          const videoTrack = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
+          const audioTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalTrack | undefined;
+          if (videoTrack) setLocalVideoTrack(videoTrack);
+          if (audioTrack) localAudioTrackRef.current = audioTrack;
+        }
+      } catch (error) {
+        console.error("LiveKit connection error:", error);
+        setDevMode(true);
+        setConnectionState("dev-mode");
+      }
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+        roomRef.current = null;
+      }
+    };
+  }, [debateId, isActive]);
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const handleEndDebate = async () => {
+  const toggleMic = useCallback(async () => {
+    if (roomRef.current) {
+      await roomRef.current.localParticipant.setMicrophoneEnabled(!isMicOn);
+    }
+    setIsMicOn(!isMicOn);
+  }, [isMicOn]);
+
+  const toggleCam = useCallback(async () => {
+    if (roomRef.current) {
+      await roomRef.current.localParticipant.setCameraEnabled(!isCamOn);
+      if (!isCamOn) {
+        const videoTrack = roomRef.current.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
+        if (videoTrack) setLocalVideoTrack(videoTrack);
+      } else {
+        setLocalVideoTrack(null);
+      }
+    }
+    setIsCamOn(!isCamOn);
+  }, [isCamOn]);
+
+  const handleEndDebate = useCallback(async () => {
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    // TODO: Update debate status in Supabase, calculate ELO changes
-  };
+
+    // Disconnect LiveKit
+    if (roomRef.current) {
+      roomRef.current.disconnect();
+      roomRef.current = null;
+    }
+
+    // Update debate status in Supabase
+    try {
+      await fetch("/api/debate/end", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ debateId }),
+      });
+    } catch (error) {
+      console.error("Failed to end debate:", error);
+    }
+  }, [debateId]);
+
+  const handleLeave = useCallback(() => {
+    if (roomRef.current) {
+      roomRef.current.disconnect();
+    }
+    router.push("/find");
+  }, [router]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -80,6 +253,13 @@ export default function DebateRoom({
           </div>
 
           <div className="flex items-center gap-4 ml-4">
+            {/* Connection status */}
+            {devMode && (
+              <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">
+                Dev Mode — no video
+              </span>
+            )}
+
             {/* Timer */}
             <div className="text-center">
               <p className="text-2xl font-mono text-white">{formatTime(debateTime)}</p>
@@ -94,56 +274,69 @@ export default function DebateRoom({
             }`}>
               {isActive ? "● LIVE" : "ENDED"}
             </div>
+
+            {/* Chat toggle */}
+            <button
+              onClick={() => setShowChat(!showChat)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                showChat
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                  : "bg-gray-800 text-gray-400 border border-gray-700 hover:text-white"
+              }`}
+            >
+              💬 Chat
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Main content — video areas */}
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* User A (left / top) video */}
-        <div className="flex-1 relative bg-gray-950 border-b lg:border-b-0 lg:border-r border-gray-800">
-          {/* Video placeholder — LiveKit will go here in Phase 5 */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-24 h-24 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl font-bold text-emerald-400">
-                  {me.username[0]?.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-white font-semibold text-lg">{me.username}</p>
-              <p className="text-emerald-400 text-sm">{myStanceLabel}</p>
-              <p className="text-gray-500 text-xs mt-1">{me.elo} ELO</p>
-              <p className="text-gray-700 text-xs mt-4">Camera will appear here</p>
-            </div>
+      {/* Main content — video + chat */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Video area */}
+        <div className="flex-1 flex flex-col lg:flex-row">
+          {/* My video */}
+          <div className="flex-1 relative border-b lg:border-b-0 lg:border-r border-gray-800">
+            <VideoTile
+              track={localVideoTrack || undefined}
+              username={me.username}
+              stanceLabel={myStanceLabel}
+              elo={me.elo}
+              isLocal={true}
+              isMuted={!isMicOn}
+              isCameraOff={!isCamOn}
+              accentColor="emerald"
+            />
           </div>
 
-          {/* Name overlay */}
-          <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1.5">
-            <p className="text-white text-sm font-medium">{me.username} <span className="text-gray-400">(You)</span></p>
+          {/* Opponent video */}
+          <div className="flex-1 relative">
+            <VideoTile
+              track={remoteVideoTrack || undefined}
+              username={opponent.username}
+              stanceLabel={opponentStanceLabel}
+              elo={opponent.elo}
+              isLocal={false}
+              isMuted={isOpponentMuted}
+              isCameraOff={isOpponentCamOff}
+              accentColor="red"
+            />
           </div>
         </div>
 
-        {/* User B (right / bottom) video */}
-        <div className="flex-1 relative bg-gray-950">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-24 h-24 rounded-full bg-red-500/20 border-2 border-red-500/40 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl font-bold text-red-400">
-                  {opponent.username[0]?.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-white font-semibold text-lg">{opponent.username}</p>
-              <p className="text-red-400 text-sm">{opponentStanceLabel}</p>
-              <p className="text-gray-500 text-xs mt-1">{opponent.elo} ELO</p>
-              <p className="text-gray-700 text-xs mt-4">Camera will appear here</p>
-            </div>
+        {/* Chat panel */}
+        {showChat && (
+          <div className="w-80 hidden lg:flex flex-col">
+            <DebateChat
+              debateId={debateId}
+              currentUserId={currentUserId}
+              currentUsername={me.username}
+              userAId={userA.id}
+              userAUsername={userA.username}
+              userBUsername={userB.username}
+              isActive={isActive}
+            />
           </div>
-
-          {/* Name overlay */}
-          <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1.5">
-            <p className="text-white text-sm font-medium">{opponent.username}</p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Bottom bar — controls */}
@@ -151,28 +344,56 @@ export default function DebateRoom({
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left — debate info */}
           <div className="text-sm text-gray-400">
-            <span className="text-gray-500">Debate ID:</span> {debateId.slice(0, 8)}...
+            <span className="text-gray-500">ID:</span> {debateId.slice(0, 8)}
+            {connectionState === "connected" && (
+              <span className="ml-2 text-emerald-400 text-xs">● Connected</span>
+            )}
+            {connectionState === "dev-mode" && (
+              <span className="ml-2 text-yellow-400 text-xs">● Dev mode</span>
+            )}
           </div>
 
           {/* Center — action buttons */}
           <div className="flex items-center gap-3">
-            {/* Mic toggle placeholder */}
-            <button className="w-12 h-12 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
-              🎙️
+            {/* Mic toggle */}
+            <button
+              onClick={toggleMic}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                isMicOn
+                  ? "bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"
+                  : "bg-red-600/20 border border-red-500/30 text-red-400"
+              }`}
+            >
+              {isMicOn ? "🎙️" : "🔇"}
             </button>
 
-            {/* Camera toggle placeholder */}
-            <button className="w-12 h-12 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
-              📷
+            {/* Camera toggle */}
+            <button
+              onClick={toggleCam}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                isCamOn
+                  ? "bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"
+                  : "bg-red-600/20 border border-red-500/30 text-red-400"
+              }`}
+            >
+              {isCamOn ? "📷" : "📷"}
             </button>
 
-            {/* End debate */}
-            {isActive && (
+            {/* End debate / Leave */}
+            {isActive ? (
               <button
                 onClick={handleEndDebate}
                 className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 transition-colors"
+                title="End debate"
               >
                 ✕
+              </button>
+            ) : (
+              <button
+                onClick={handleLeave}
+                className="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium"
+              >
+                Leave Room
               </button>
             )}
           </div>
