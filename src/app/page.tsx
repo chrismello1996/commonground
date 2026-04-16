@@ -50,7 +50,7 @@ export default async function HomePage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href={stanceCount > 0 ? "/debate" : "/stances"}
+                href={stanceCount > 0 ? "/find" : "/stances"}
                 className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-lg transition-colors inline-flex items-center justify-center gap-2"
               >
                 <svg

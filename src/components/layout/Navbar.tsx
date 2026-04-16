@@ -41,7 +41,7 @@ export default async function Navbar() {
             Stances
           </Link>
           <Link
-            href="/debate"
+            href="/find"
             className="text-sm px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium"
           >
             Find a Debate
