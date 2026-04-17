@@ -13,7 +13,7 @@ export default async function Navbar() {
   if (user) {
     const { data } = await supabase
       .from("users")
-      .select("username, display_name, avatar_url, elo, coins")
+      .select("username, display_name, avatar_url, elo")
       .eq("id", user.id)
       .single();
     profile = data;
@@ -62,31 +62,17 @@ export default async function Navbar() {
             />
           </div>
 
-          {/* Online Count Badge */}
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-gray-500 bg-gray-100 px-2 py-1 rounded">
-            <span className="w-[7px] h-[7px] rounded-full bg-red-500 animate-pulse" />
-            1.2K
-          </div>
-
-          {/* Coin Badge */}
-          {profile && (
-            <div className="hidden sm:flex items-center gap-1 text-xs font-bold text-amber-800 bg-gray-100 px-2.5 py-1 rounded">
-              <span>🪙</span>
-              {profile.coins || 500}
-            </div>
-          )}
-
           {/* User Badge with ELO */}
           {profile && (
             <Link
               href={`/profile/${profile.username}`}
-              className="flex items-center gap-1.5 px-1 pr-2.5 py-0.5 rounded-md bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700 hover:text-gray-900 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-1.5 pr-3 py-1 rounded-lg bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700 hover:text-gray-900 transition cursor-pointer"
             >
-              <div className="w-[26px] h-[26px] rounded flex items-center justify-center text-[12px] font-extrabold text-white bg-emerald-500">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-extrabold text-white bg-emerald-500">
                 {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
               </div>
-              <span className="hidden sm:inline">@{profile.username}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ml-0.5 ${
+              <span className="hidden sm:inline">{profile.username}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
                 eloRank === "gold"
                   ? "bg-amber-800/10 text-amber-800"
                   : eloRank === "silver"

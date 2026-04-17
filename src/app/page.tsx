@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
-import { CATEGORY_TAGS } from "@/utils/constants";
+
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -83,25 +83,6 @@ export default async function HomePage() {
               </p>
             </Link>
           )}
-        </div>
-
-        {/* Category Chips */}
-        <div className="mb-10">
-          <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider text-center mb-3">
-            Debate Categories
-          </h3>
-          <div className="flex flex-wrap justify-center gap-2">
-            {CATEGORY_TAGS.map((cat) => (
-              <Link
-                key={cat.id}
-                href="/stances"
-                className="px-4 py-2 rounded-full border-2 border-gray-200 bg-gray-50 text-gray-500 text-xs font-semibold hover:border-emerald-500 hover:text-gray-900 transition-all flex items-center gap-1.5"
-              >
-                <span>{cat.icon}</span>
-                {cat.label}
-              </Link>
-            ))}
-          </div>
         </div>
 
         {/* Stats Row */}
