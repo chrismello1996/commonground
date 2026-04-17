@@ -32,18 +32,18 @@ export default async function HomePage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <section className="relative py-24 px-4 overflow-hidden">
+        <section className="relative py-14 sm:py-24 px-4 overflow-hidden">
           {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 via-transparent to-transparent" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-500/10 blur-[120px] rounded-full" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] h-[300px] sm:h-[400px] bg-emerald-500/10 blur-[120px] rounded-full" />
 
           <div className="relative max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl sm:text-6xl font-bold leading-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight mb-4 sm:mb-6">
               Find your opponent.
               <br />
               <span className="text-emerald-500">Win the debate.</span>
             </h1>
-            <p className="text-xl text-gray-400 mb-10 max-w-xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-400 mb-8 sm:mb-10 max-w-xl mx-auto">
               Pick your stance, get matched with someone who disagrees, and
               settle it live on video.
             </p>

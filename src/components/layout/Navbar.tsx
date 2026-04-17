@@ -26,7 +26,7 @@ export default async function Navbar() {
           Common<span className="text-emerald-500">Ground</span>
         </Link>
 
-        {/* Center Nav */}
+        {/* Center Nav — desktop */}
         <div className="hidden sm:flex items-center gap-6">
           <Link
             href="/"
@@ -45,6 +45,22 @@ export default async function Navbar() {
             className="text-sm px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium"
           >
             Find a Debate
+          </Link>
+        </div>
+
+        {/* Mobile nav links */}
+        <div className="flex sm:hidden items-center gap-3">
+          <Link
+            href="/stances"
+            className="text-xs text-gray-400 hover:text-white transition"
+          >
+            Stances
+          </Link>
+          <Link
+            href="/find"
+            className="text-xs px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium"
+          >
+            Debate
           </Link>
         </div>
 

@@ -14,9 +14,51 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "CommonGround - Debate Platform",
+  title: "CommonGround — Live Video Debates on the Topics That Matter",
   description:
-    "Find your opponent. Defend your stance. Win the debate.",
+    "Pick your stance, get matched with someone who disagrees, and settle it live on video. Free speech through fair debate.",
+  metadataBase: new URL("https://commongrounddebate.com"),
+  keywords: [
+    "debate",
+    "live debate",
+    "video debate",
+    "free speech",
+    "politics",
+    "economics",
+    "philosophy",
+    "omegle",
+    "discussion",
+    "argue",
+    "opinion",
+  ],
+  authors: [{ name: "CommonGround" }],
+  openGraph: {
+    type: "website",
+    siteName: "CommonGround",
+    title: "CommonGround — Live Video Debates",
+    description:
+      "Pick your stance, get matched with someone who disagrees, and settle it live on video.",
+    url: "https://commongrounddebate.com",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "CommonGround — Live Video Debates",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CommonGround — Live Video Debates",
+    description:
+      "Pick your stance, get matched with someone who disagrees, and settle it live on video.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -26,6 +68,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="theme-color" content="#030712" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white min-h-screen`}
       >

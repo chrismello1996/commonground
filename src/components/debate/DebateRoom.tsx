@@ -280,31 +280,31 @@ export default function DebateRoom({
   return (
     <div className="flex flex-col h-screen">
       {/* Top bar — topic + timer */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="bg-gray-900 border-b border-gray-800 px-3 sm:px-4 py-2 sm:py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-emerald-400 uppercase tracking-wider font-medium mb-0.5">
+            <p className="text-[10px] sm:text-xs text-emerald-400 uppercase tracking-wider font-medium mb-0.5">
               {categoryConfig?.label || category}
             </p>
-            <p className="text-white font-medium truncate">{topic}</p>
+            <p className="text-white text-sm sm:text-base font-medium truncate">{topic}</p>
           </div>
 
-          <div className="flex items-center gap-4 ml-4">
-            {/* Connection status */}
+          <div className="flex items-center gap-2 sm:gap-4 ml-2 shrink-0">
+            {/* Connection status — hidden on mobile */}
             {devMode && (
-              <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">
+              <span className="hidden sm:inline text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">
                 Dev Mode — no video
               </span>
             )}
 
             {/* Timer */}
             <div className="text-center">
-              <p className="text-2xl font-mono text-white">{formatTime(debateTime)}</p>
-              <p className="text-[10px] text-gray-500 uppercase">Duration</p>
+              <p className="text-lg sm:text-2xl font-mono text-white">{formatTime(debateTime)}</p>
+              <p className="text-[10px] text-gray-500 uppercase hidden sm:block">Duration</p>
             </div>
 
             {/* Status indicator */}
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+            <div className={`px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium ${
               isActive
                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                 : "bg-gray-800 text-gray-400 border border-gray-700"
@@ -315,13 +315,13 @@ export default function DebateRoom({
             {/* Chat toggle */}
             <button
               onClick={() => setShowChat(!showChat)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                 showChat
                   ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                   : "bg-gray-800 text-gray-400 border border-gray-700 hover:text-white"
               }`}
             >
-              💬 Chat
+              💬
             </button>
           </div>
         </div>
@@ -360,27 +360,53 @@ export default function DebateRoom({
           </div>
         </div>
 
-        {/* Chat panel */}
+        {/* Chat panel — sidebar on lg, overlay on mobile */}
         {showChat && (
-          <div className="w-80 hidden lg:flex flex-col">
-            <DebateChat
-              debateId={debateId}
-              currentUserId={currentUserId}
-              currentUsername={me.username}
-              userAId={userA.id}
-              userAUsername={userA.username}
-              userBUsername={userB.username}
-              isActive={isActive}
-            />
-          </div>
+          <>
+            {/* Desktop sidebar */}
+            <div className="w-80 hidden lg:flex flex-col">
+              <DebateChat
+                debateId={debateId}
+                currentUserId={currentUserId}
+                currentUsername={me.username}
+                userAId={userA.id}
+                userAUsername={userA.username}
+                userBUsername={userB.username}
+                isActive={isActive}
+              />
+            </div>
+            {/* Mobile overlay */}
+            <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-gray-950/95 backdrop-blur-sm">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                <span className="text-sm font-medium text-white">Chat</span>
+                <button
+                  onClick={() => setShowChat(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800 text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <DebateChat
+                  debateId={debateId}
+                  currentUserId={currentUserId}
+                  currentUsername={me.username}
+                  userAId={userA.id}
+                  userAUsername={userA.username}
+                  userBUsername={userB.username}
+                  isActive={isActive}
+                />
+              </div>
+            </div>
+          </>
         )}
       </div>
 
       {/* Bottom bar — controls */}
-      <div className="bg-gray-900 border-t border-gray-800 px-4 py-4">
+      <div className="bg-gray-900 border-t border-gray-800 px-3 sm:px-4 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Left — debate info */}
-          <div className="text-sm text-gray-400">
+          {/* Left — debate info (hidden on small mobile) */}
+          <div className="hidden sm:block text-sm text-gray-400">
             <span className="text-gray-500">ID:</span> {debateId.slice(0, 8)}
             {connectionState === "connected" && (
               <span className="ml-2 text-emerald-400 text-xs">● Connected</span>
@@ -391,11 +417,11 @@ export default function DebateRoom({
           </div>
 
           {/* Center — action buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 mx-auto sm:mx-0">
             {/* Mic toggle */}
             <button
               onClick={toggleMic}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isMicOn
                   ? "bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"
                   : "bg-red-600/20 border border-red-500/30 text-red-400"
@@ -407,7 +433,7 @@ export default function DebateRoom({
             {/* Camera toggle */}
             <button
               onClick={toggleCam}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
                 isCamOn
                   ? "bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"
                   : "bg-red-600/20 border border-red-500/30 text-red-400"
@@ -420,10 +446,10 @@ export default function DebateRoom({
             {isActive && (
               <button
                 onClick={handleSkip}
-                className="px-4 py-2 rounded-lg bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:bg-orange-600/30 transition-colors text-sm font-medium"
+                className="px-3 sm:px-4 py-2 rounded-lg bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:bg-orange-600/30 transition-colors text-xs sm:text-sm font-medium"
                 title="Skip to next opponent"
               >
-                Skip ⏭
+                <span className="hidden sm:inline">Skip </span>⏭
               </button>
             )}
 
@@ -431,7 +457,7 @@ export default function DebateRoom({
             {isActive ? (
               <button
                 onClick={handleEndDebate}
-                className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 transition-colors"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 transition-colors"
                 title="End debate"
               >
                 ✕
@@ -439,15 +465,15 @@ export default function DebateRoom({
             ) : (
               <button
                 onClick={handleLeave}
-                className="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium"
+                className="px-3 sm:px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-xs sm:text-sm font-medium"
               >
-                Leave Room
+                Leave
               </button>
             )}
           </div>
 
-          {/* Right — viewer count placeholder */}
-          <div className="text-sm text-gray-400">
+          {/* Right — viewer count (hidden on small mobile) */}
+          <div className="hidden sm:block text-sm text-gray-400">
             👁️ <span className="text-white">0</span> watching
           </div>
         </div>
