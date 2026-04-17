@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { leaveQueue } from "@/lib/matchmaking";
+import { redis } from "@/lib/redis";
 
-export async function POST() {
+const QUEUE_KEY = "matchmaking:queue";
+
+export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { userId } = await req.json();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    await leaveQueue(user.id);
+    // Remove user from queue
+    const queueRaw = await redis.lrange(QUEUE_KEY, 0, -1);
+    for (const raw of queueRaw) {
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (parsed.userId === userId) {
+        await redis.lrem(QUEUE_KEY, 1, raw);
+      }
+    }
 
-    return NextResponse.json({ status: "left" });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Leave queue error:", error);
+    console.error("Matchmaking leave error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
