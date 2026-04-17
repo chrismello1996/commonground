@@ -10,25 +10,37 @@ function SignupForm() {
   const error = searchParams.get("error");
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-white">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight">
-            Common<span className="text-emerald-500">Ground</span>
+          <div className="flex justify-center mb-3">
+            <svg width="64" height="56" viewBox="0 0 140 120" fill="none">
+              <defs>
+                <clipPath id="sGreen"><rect x="8" y="12" width="72" height="56" rx="16"/></clipPath>
+              </defs>
+              <rect x="8" y="12" width="72" height="56" rx="16" fill="#10b981"/>
+              <polygon points="28,68 40,68 24,84" fill="#10b981"/>
+              <rect x="52" y="24" width="72" height="56" rx="16" fill="#8B4513"/>
+              <polygon points="104,80 92,80 108,96" fill="#8B4513"/>
+              <rect x="52" y="24" width="72" height="56" rx="16" fill="#e5e7eb" clipPath="url(#sGreen)"/>
+            </svg>
+          </div>
+          <h1 className="text-4xl font-brand tracking-wide text-brand-gradient">
+            CommonGround
           </h1>
-          <p className="text-gray-400 mt-2">
+          <p className="text-gray-400 mt-2 text-sm">
             Join the debate. Pick your stance.
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-          <h2 className="text-2xl font-semibold mb-6">Create Account</h2>
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8">
+          <h2 className="text-xl font-bold mb-6 text-gray-900">Create Account</h2>
 
           {/* Error Banner */}
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg px-4 py-3 mb-6 text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-6 text-sm">
               {error}
             </div>
           )}
@@ -37,7 +49,7 @@ function SignupForm() {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-gray-300 mb-1.5"
+                className="block text-sm font-semibold text-gray-700 mb-1.5"
               >
                 Username
               </label>
@@ -48,10 +60,10 @@ function SignupForm() {
                 required
                 minLength={3}
                 pattern="[a-zA-Z0-9_]+"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition"
                 placeholder="debate_king"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-[11px] text-gray-400 mt-1">
                 Letters, numbers, and underscores only
               </p>
             </div>
@@ -59,7 +71,7 @@ function SignupForm() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-300 mb-1.5"
+                className="block text-sm font-semibold text-gray-700 mb-1.5"
               >
                 Email
               </label>
@@ -68,7 +80,7 @@ function SignupForm() {
                 name="email"
                 type="email"
                 required
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition"
                 placeholder="you@example.com"
               />
             </div>
@@ -76,7 +88,7 @@ function SignupForm() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-300 mb-1.5"
+                className="block text-sm font-semibold text-gray-700 mb-1.5"
               >
                 Password
               </label>
@@ -86,17 +98,17 @@ function SignupForm() {
                 type="password"
                 required
                 minLength={6}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition"
                 placeholder="••••••••"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-[11px] text-gray-400 mt-1">
                 Minimum 6 characters
               </p>
             </div>
 
             <button
               formAction={signup}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg transition-colors mt-2"
+              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors mt-2"
             >
               Create Account
             </button>
@@ -106,7 +118,7 @@ function SignupForm() {
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-emerald-500 hover:text-emerald-400 font-medium"
+              className="text-emerald-500 hover:text-emerald-600 font-semibold"
             >
               Sign in
             </Link>

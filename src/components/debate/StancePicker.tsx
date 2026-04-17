@@ -23,13 +23,11 @@ export default function StancePicker({
   const router = useRouter();
 
   const handleSelect = async (category: string, stanceId: string) => {
-    // Toggle off if already selected
     if (selected[category] === stanceId) {
       const newSelected = { ...selected };
       delete newSelected[category];
       setSelected(newSelected);
 
-      // Delete from Supabase
       setSaving(category);
       const supabase = createClient();
       await supabase
@@ -68,11 +66,11 @@ export default function StancePicker({
   return (
     <div>
       {/* Progress */}
-      <div className="mb-8 bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+      <div className="mb-8 bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
         <div>
-          <span className="text-sm text-gray-400">Stances selected: </span>
+          <span className="text-sm text-gray-500">Stances selected: </span>
           <span className="text-emerald-500 font-bold">{stanceCount}</span>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-400">
             {" "}
             / {Object.keys(STANCE_OPTIONS).length}
           </span>
@@ -85,7 +83,7 @@ export default function StancePicker({
               });
             }}
             disabled={isPending}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-lg transition-colors"
           >
             {isPending ? "..." : "Done — Find a Debate"}
           </button>
@@ -97,18 +95,18 @@ export default function StancePicker({
         {Object.entries(STANCE_OPTIONS).map(([categoryId, category]) => (
           <div
             key={categoryId}
-            className="bg-gray-900 border border-gray-800 rounded-2xl p-6"
+            className="bg-gray-50 border border-gray-200 rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-4">
               <span className="text-2xl">{category.icon}</span>
-              <h2 className="text-lg font-semibold">{category.label}</h2>
+              <h2 className="text-lg font-bold text-gray-900">{category.label}</h2>
               {saved[categoryId] && (
-                <span className="text-xs text-emerald-400 ml-auto">
+                <span className="text-xs text-emerald-500 font-semibold ml-auto">
                   Saved!
                 </span>
               )}
               {saving === categoryId && (
-                <span className="text-xs text-gray-500 ml-auto">
+                <span className="text-xs text-gray-400 ml-auto">
                   Saving...
                 </span>
               )}
@@ -122,10 +120,10 @@ export default function StancePicker({
                     key={stance.id}
                     onClick={() => handleSelect(categoryId, stance.id)}
                     disabled={saving === categoryId}
-                    className={`relative px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
+                    className={`relative px-4 py-3 rounded-xl text-sm font-semibold transition-all border-2 ${
                       isSelected
-                        ? "border-emerald-500 bg-emerald-500/10 text-white ring-1 ring-emerald-500/50"
-                        : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600 hover:bg-gray-750"
+                        ? "border-emerald-500 bg-emerald-500/10 text-gray-900 ring-1 ring-emerald-500/50"
+                        : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
                     }`}
                   >
                     <div

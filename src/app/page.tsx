@@ -27,147 +27,129 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
-      <main className="flex-1">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12 overflow-y-auto">
         {/* Hero */}
-        <section className="relative py-14 sm:py-24 px-4 overflow-hidden">
-          {/* Gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 via-transparent to-transparent" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] sm:w-[800px] h-[300px] sm:h-[400px] bg-emerald-500/10 blur-[120px] rounded-full" />
+        <div className="text-center mb-10">
+          <h1 className="font-brand text-4xl sm:text-5xl tracking-wide mb-3 text-brand-gradient">
+            CommonGround
+          </h1>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight mb-3 text-gray-900">
+            Real Talk.<br />
+            <span className="text-brand-gradient">No Filter.</span>
+          </h2>
+          <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
+            Get matched for live video conversation. Zero censorship. The audience votes. Your ELO rises or falls.
+          </p>
+        </div>
 
-          <div className="relative max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight mb-4 sm:mb-6">
-              Find your opponent.
-              <br />
-              <span className="text-emerald-500">Win the debate.</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-gray-400 mb-8 sm:mb-10 max-w-xl mx-auto">
-              Pick your stance, get matched with someone who disagrees, and
-              settle it live on video.
+        {/* Match Options */}
+        <div className="flex gap-4 mb-10 flex-wrap justify-center">
+          <Link
+            href={stanceCount > 0 ? "/debate" : "/stances"}
+            className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+          >
+            <div className="text-3xl mb-3 text-emerald-500">⚡</div>
+            <h3 className="text-sm font-bold text-gray-900 mb-1">
+              {stanceCount > 0 ? "Find a Debate" : "Pick Stances First"}
+            </h3>
+            <p className="text-[11px] text-gray-500 leading-snug">
+              {stanceCount > 0
+                ? "Get matched with someone who disagrees"
+                : "Choose where you stand on key topics"}
             </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href={stanceCount > 0 ? "/find" : "/stances"}
-                className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-lg transition-colors inline-flex items-center justify-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-                {stanceCount > 0 ? "Find a Debate" : "Pick Your Stances"}
-              </Link>
-              {stanceCount > 0 && (
-                <Link
-                  href="/stances"
-                  className="px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-lg transition-colors border border-gray-700"
-                >
-                  Edit Stances
-                </Link>
-              )}
-            </div>
-          </div>
-        </section>
+          </Link>
+          {stanceCount > 0 && (
+            <Link
+              href="/stances"
+              className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+            >
+              <div className="text-3xl mb-3 text-emerald-500">🎯</div>
+              <h3 className="text-sm font-bold text-gray-900 mb-1">Edit Stances</h3>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Update your positions on topics
+              </p>
+            </Link>
+          )}
+        </div>
 
         {/* Category Chips */}
-        <section className="py-8 px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4 text-center">
-              Debate Categories
-            </h2>
-            <div className="flex flex-wrap justify-center gap-3">
-              {CATEGORY_TAGS.map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/stances`}
-                  className="px-4 py-2 bg-gray-900 border border-gray-800 rounded-full text-sm text-gray-300 hover:border-emerald-500/50 hover:text-white transition-colors"
-                >
-                  <span className="mr-1.5">{cat.icon}</span>
-                  {cat.label}
-                </Link>
-              ))}
-            </div>
+        <div className="mb-10">
+          <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider text-center mb-3">
+            Debate Categories
+          </h3>
+          <div className="flex flex-wrap justify-center gap-2">
+            {CATEGORY_TAGS.map((cat) => (
+              <Link
+                key={cat.id}
+                href="/stances"
+                className="px-4 py-2 rounded-full border-2 border-gray-200 bg-gray-50 text-gray-500 text-xs font-semibold hover:border-emerald-500 hover:text-gray-900 transition-all flex items-center gap-1.5"
+              >
+                <span>{cat.icon}</span>
+                {cat.label}
+              </Link>
+            ))}
           </div>
-        </section>
+        </div>
 
         {/* Stats Row */}
         {profile && (
-          <section className="py-12 px-4">
-            <div className="max-w-2xl mx-auto grid grid-cols-3 gap-4">
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
-                <p className="text-3xl font-bold text-emerald-500">
-                  {profile.elo}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">ELO Rating</p>
-              </div>
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
-                <p className="text-3xl font-bold">
-                  {profile.wins}/{profile.losses}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">W/L Record</p>
-              </div>
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
-                <p className="text-3xl font-bold">{stanceCount}</p>
-                <p className="text-sm text-gray-500 mt-1">Stances Set</p>
-              </div>
+          <div className="grid grid-cols-3 gap-4 max-w-md w-full mb-10">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
+              <p className="text-2xl font-black text-emerald-500">{profile.elo}</p>
+              <p className="text-[11px] text-gray-400 mt-1 font-medium">ELO Rating</p>
             </div>
-          </section>
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
+              <p className="text-2xl font-black text-gray-900">
+                {profile.wins}/{profile.losses}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-1 font-medium">W/L Record</p>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
+              <p className="text-2xl font-black text-gray-900">{stanceCount}</p>
+              <p className="text-[11px] text-gray-400 mt-1 font-medium">Stances Set</p>
+            </div>
+          </div>
         )}
 
         {/* How It Works */}
-        <section className="py-16 px-4 border-t border-gray-800/50">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-12">
-              How It Works
-            </h2>
-            <div className="grid sm:grid-cols-3 gap-8">
-              {[
-                {
-                  step: "01",
-                  title: "Pick Your Stances",
-                  desc: "Tell us where you stand on politics, economics, philosophy, and more.",
-                },
-                {
-                  step: "02",
-                  title: "Get Matched",
-                  desc: "We pair you with someone who holds the opposing view on the same topic.",
-                },
-                {
-                  step: "03",
-                  title: "Debate Live",
-                  desc: "Go head-to-head on video. Make your case. Win the crowd.",
-                },
-              ].map((item) => (
-                <div key={item.step} className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                    <span className="text-sm font-bold text-emerald-500">
-                      {item.step}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-                  <p className="text-gray-400 text-sm">{item.desc}</p>
+        <div className="w-full max-w-3xl border-t border-gray-200 pt-12 mb-8">
+          <h2 className="text-xl font-extrabold text-center mb-10 text-gray-900">How It Works</h2>
+          <div className="grid sm:grid-cols-3 gap-8">
+            {[
+              {
+                step: "01",
+                title: "Pick Your Stances",
+                desc: "Tell us where you stand on politics, economics, philosophy, and more.",
+              },
+              {
+                step: "02",
+                title: "Get Matched",
+                desc: "We pair you with someone who holds the opposing view on the same topic.",
+              },
+              {
+                step: "03",
+                title: "Debate Live",
+                desc: "Go head-to-head on video. Make your case. Win the crowd.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="w-11 h-11 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-xs font-bold text-emerald-600">{item.step}</span>
                 </div>
-              ))}
-            </div>
+                <h3 className="font-bold text-sm mb-2 text-gray-900">{item.title}</h3>
+                <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 py-6 px-4 text-center text-sm text-gray-600">
-        CommonGround &copy; {new Date().getFullYear()} &mdash; Free speech
-        through fair debate.
+      <footer className="border-t border-gray-200 py-5 px-4 text-center text-xs text-gray-400">
+        CommonGround &copy; {new Date().getFullYear()} &mdash; Free speech through fair debate.
       </footer>
     </div>
   );

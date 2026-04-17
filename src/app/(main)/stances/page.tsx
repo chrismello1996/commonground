@@ -25,7 +25,7 @@ export default async function StancesPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Pick Your Stances</h1>
-        <p className="text-gray-400 mt-2">
+        <p className="text-gray-500 mt-2">
           Choose where you stand on each topic. We&apos;ll match you with
           opponents who disagree.
         </p>
