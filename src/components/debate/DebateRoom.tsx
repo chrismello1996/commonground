@@ -240,6 +240,43 @@ export default function DebateRoom({
     router.push("/find");
   }, [router]);
 
+  const handleSkip = useCallback(async () => {
+    // End current debate
+    setIsActive(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (roomRef.current) {
+      roomRef.current.disconnect();
+      roomRef.current = null;
+    }
+
+    try {
+      await fetch("/api/debate/end", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ debateId }),
+      });
+    } catch {
+      // Best effort
+    }
+
+    // Rejoin queue with same category
+    try {
+      const res = await fetch("/api/matchmaking/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category }),
+      });
+      const data = await res.json();
+      if (data.status === "matched") {
+        router.push(`/debate/${data.debateId}`);
+      } else {
+        router.push("/find");
+      }
+    } catch {
+      router.push("/find");
+    }
+  }, [debateId, category, router]);
+
   return (
     <div className="flex flex-col h-screen">
       {/* Top bar — topic + timer */}
@@ -378,6 +415,17 @@ export default function DebateRoom({
             >
               {isCamOn ? "📷" : "📷"}
             </button>
+
+            {/* Skip / Next opponent */}
+            {isActive && (
+              <button
+                onClick={handleSkip}
+                className="px-4 py-2 rounded-lg bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:bg-orange-600/30 transition-colors text-sm font-medium"
+                title="Skip to next opponent"
+              >
+                Skip ⏭
+              </button>
+            )}
 
             {/* End debate / Leave */}
             {isActive ? (
