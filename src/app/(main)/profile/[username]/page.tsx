@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ProfileTabs from "./ProfileTabs";
 
 export default async function ProfilePage({
   params,
@@ -36,91 +37,70 @@ export default async function ProfilePage({
     stancesByCategory[s.category] = s.stance;
   });
 
+  const eloRank = profile.elo >= 1600 ? "gold" : profile.elo >= 1400 ? "silver" : "bronze";
+
   return (
-    <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <nav className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-xl font-brand text-brand-gradient">
-          CommonGround
-        </Link>
-        {isOwnProfile && (
-          <span className="text-sm text-gray-400">Your Profile</span>
-        )}
-      </nav>
-
-      <main className="max-w-2xl mx-auto px-4 py-12">
-        {/* Profile Card */}
-        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center text-3xl font-bold text-white shrink-0">
-              {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
-            </div>
-
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {profile.display_name || profile.username}
-              </h1>
-              <p className="text-gray-400">@{profile.username}</p>
-            </div>
-
-            {isOwnProfile && (
-              <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition">
-                Edit Profile
-              </button>
-            )}
+    <div className="max-w-lg mx-auto px-4 py-8">
+      {/* Profile Header */}
+      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-7">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center text-2xl font-black text-white flex-shrink-0">
+            {(profile.display_name || profile.username)?.[0]?.toUpperCase()}
           </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mt-8">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-500">{profile.elo}</p>
-              <p className="text-xs text-gray-400 font-medium">ELO</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-500">{profile.wins}</p>
-              <p className="text-xs text-gray-400 font-medium">Wins</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-red-500">{profile.losses}</p>
-              <p className="text-xs text-gray-400 font-medium">Losses</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-400">{profile.draws}</p>
-              <p className="text-xs text-gray-400 font-medium">Draws</p>
-            </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-extrabold text-gray-900">
+              {profile.display_name || profile.username}
+            </h2>
+            <p className="text-gray-500 text-sm flex items-center gap-1.5">
+              @{profile.username}
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                eloRank === "gold"
+                  ? "bg-amber-800/20 text-amber-800"
+                  : eloRank === "silver"
+                    ? "bg-gray-500/10 text-gray-500"
+                    : "bg-orange-700/20 text-orange-700"
+              }`}>
+                {profile.elo} ELO
+              </span>
+            </p>
           </div>
-        </div>
-
-        {/* Stances */}
-        <div className="mt-8">
-          <h2 className="text-lg font-bold mb-4 text-gray-900">Stances</h2>
-          {Object.keys(stancesByCategory).length > 0 ? (
-            <div className="grid gap-3">
-              {Object.entries(stancesByCategory).map(([category, stance]) => (
-                <div
-                  key={category}
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 flex items-center justify-between"
-                >
-                  <span className="text-gray-500 capitalize">{category}</span>
-                  <span className="text-emerald-500 font-semibold">{stance}</span>
-                </div>
-              ))}
-            </div>
+          {isOwnProfile ? (
+            <Link
+              href="/stances"
+              className="px-3 py-1.5 border border-gray-200 rounded-md text-xs font-semibold text-gray-600 hover:bg-gray-100 transition"
+            >
+              Edit Stances
+            </Link>
           ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-8 text-center text-gray-400">
-              No stances selected yet
-            </div>
+            <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-md text-xs font-bold hover:bg-emerald-600 transition">
+              Follow
+            </button>
           )}
         </div>
 
-        {/* Debate History */}
-        <div className="mt-8">
-          <h2 className="text-lg font-bold mb-4 text-gray-900">Recent Debates</h2>
-          <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-8 text-center text-gray-400">
-            No debates yet — time to jump in!
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-2">
+          <div className="text-center py-2.5 bg-gray-100 rounded-lg">
+            <p className="text-lg font-extrabold text-emerald-500">{profile.elo}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">ELO</p>
+          </div>
+          <div className="text-center py-2.5 bg-gray-100 rounded-lg">
+            <p className="text-lg font-extrabold text-green-500">{profile.wins || 0}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Wins</p>
+          </div>
+          <div className="text-center py-2.5 bg-gray-100 rounded-lg">
+            <p className="text-lg font-extrabold text-red-500">{profile.losses || 0}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Losses</p>
+          </div>
+          <div className="text-center py-2.5 bg-gray-100 rounded-lg">
+            <p className="text-lg font-extrabold text-gray-900">{profile.followers || 0}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Followers</p>
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Profile Tabs */}
+      <ProfileTabs stancesByCategory={stancesByCategory} isOwnProfile={isOwnProfile} />
     </div>
   );
 }

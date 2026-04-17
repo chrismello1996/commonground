@@ -61,6 +61,16 @@ export default async function HomePage() {
                 : "Choose where you stand on key topics"}
             </p>
           </Link>
+          <Link
+            href="/browse"
+            className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+          >
+            <div className="text-3xl mb-3 text-emerald-500">👁️</div>
+            <h3 className="text-sm font-bold text-gray-900 mb-1">Browse Live</h3>
+            <p className="text-[11px] text-gray-500 leading-snug">
+              Watch live debates and vote for the winner
+            </p>
+          </Link>
           {stanceCount > 0 && (
             <Link
               href="/stances"

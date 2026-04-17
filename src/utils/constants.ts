@@ -4,10 +4,13 @@ export const CATEGORY_TAGS = [
   { id: "politics", label: "Politics", icon: "🏛️" },
   { id: "economics", label: "Economics", icon: "📈" },
   { id: "philosophy", label: "Philosophy", icon: "🧠" },
+  { id: "technology", label: "Technology", icon: "💻" },
+  { id: "culture", label: "Culture", icon: "🎭" },
   { id: "sports", label: "Sports", icon: "⚽" },
   { id: "conspiracy", label: "Conspiracy", icon: "👁️" },
   { id: "pill", label: "Pill", icon: "💊" },
   { id: "religion", label: "Religion", icon: "🛐" },
+  { id: "unpopular", label: "Unpopular", icon: "🌶️" },
 ] as const;
 
 // Stance options per category with opposing pairs for matchmaking
@@ -37,6 +40,16 @@ export const STANCE_OPTIONS: Record<string, {
     ],
     opposites: { capitalist: ["socialist"], socialist: ["capitalist", "austrian"], keynesian: ["austrian"], austrian: ["keynesian", "socialist"] },
   },
+  technology: {
+    label: "Technology", icon: "💻",
+    stances: [
+      { id: "aiAccelerationist", label: "AI Accelerationist", color: "#10b981" },
+      { id: "aiCautious", label: "AI Cautious", color: "#f59e0b" },
+      { id: "techOptimist", label: "Tech Optimist", color: "#3b82f6" },
+      { id: "techSkeptic", label: "Tech Skeptic", color: "#ef4444" },
+    ],
+    opposites: { aiAccelerationist: ["aiCautious"], aiCautious: ["aiAccelerationist"], techOptimist: ["techSkeptic"], techSkeptic: ["techOptimist"] },
+  },
   philosophy: {
     label: "Philosophy", icon: "🧠",
     stances: [
@@ -46,6 +59,17 @@ export const STANCE_OPTIONS: Record<string, {
       { id: "existentialist", label: "Existentialist", color: "#8b5cf6" },
     ],
     opposites: { rationalist: ["empiricist", "nihilist"], empiricist: ["rationalist"], nihilist: ["existentialist", "rationalist"], existentialist: ["nihilist"] },
+  },
+  culture: {
+    label: "Culture", icon: "🎭",
+    stances: [
+      { id: "progressive", label: "Progressive", color: "#3b82f6" },
+      { id: "conservative", label: "Conservative", color: "#ef4444" },
+      { id: "traditionalist", label: "Traditionalist", color: "#92400e" },
+      { id: "modernist", label: "Modernist", color: "#8b5cf6" },
+      { id: "centrist", label: "Centrist", color: "#6b7280" },
+    ],
+    opposites: { progressive: ["conservative", "traditionalist"], conservative: ["progressive", "modernist"], traditionalist: ["modernist", "progressive"], modernist: ["traditionalist", "conservative"], centrist: [] },
   },
   sports: {
     label: "Sports", icon: "⚽",
@@ -67,6 +91,15 @@ export const STANCE_OPTIONS: Record<string, {
     ],
     opposites: { believer: ["skeptic", "debunker"], skeptic: ["believer"], openMinded: ["debunker"], debunker: ["believer", "openMinded"] },
   },
+  unpopular: {
+    label: "Unpopular", icon: "🌶️",
+    stances: [
+      { id: "contrarian", label: "Contrarian", color: "#ef4444" },
+      { id: "radical", label: "Radical", color: "#8b5cf6" },
+      { id: "mainstream", label: "Mainstream", color: "#6b7280" },
+    ],
+    opposites: { contrarian: ["mainstream"], radical: ["centrist", "mainstream"], mainstream: ["contrarian", "radical"] },
+  },
   pill: {
     label: "Pill", icon: "💊",
     stances: [
@@ -85,49 +118,288 @@ export const STANCE_OPTIONS: Record<string, {
     label: "Religion", icon: "🛐",
     stances: [
       { id: "christianity", label: "Christianity", color: "#7c3aed" },
+      { id: "catholicism", label: "Catholicism", color: "#6d28d9" },
       { id: "islam", label: "Islam", color: "#059669" },
+      { id: "judaism", label: "Judaism", color: "#2563eb" },
+      { id: "hinduism", label: "Hinduism", color: "#ea580c" },
+      { id: "buddhism", label: "Buddhism", color: "#d97706" },
+      { id: "sikhism", label: "Sikhism", color: "#0891b2" },
       { id: "atheism", label: "Atheism", color: "#64748b" },
       { id: "agnosticism", label: "Agnosticism", color: "#94a3b8" },
-      { id: "buddhism", label: "Buddhism", color: "#d97706" },
-      { id: "hinduism", label: "Hinduism", color: "#ea580c" },
-      { id: "judaism", label: "Judaism", color: "#2563eb" },
       { id: "spiritual", label: "Spiritual", color: "#c026d3" },
+      { id: "mormonism", label: "Mormonism", color: "#1d4ed8" },
+      { id: "orthodoxChristianity", label: "Orthodox Christianity", color: "#b91c1c" },
+      { id: "protestantism", label: "Protestantism", color: "#4f46e5" },
+      { id: "jehovahsWitness", label: "Jehovah's Witness", color: "#0e7490" },
+      { id: "paganism", label: "Paganism", color: "#16a34a" },
+      { id: "taoism", label: "Taoism", color: "#0d9488" },
+      { id: "shinto", label: "Shinto", color: "#dc2626" },
+      { id: "jainism", label: "Jainism", color: "#ca8a04" },
+      { id: "zoroastrianism", label: "Zoroastrianism", color: "#b45309" },
+      { id: "bahai", label: "Baha'i", color: "#7e22ce" },
+      { id: "rastafari", label: "Rastafari", color: "#15803d" },
+      { id: "scientology", label: "Scientology", color: "#0284c7" },
+      { id: "deism", label: "Deism", color: "#78716c" },
+      { id: "satanism", label: "Satanism", color: "#991b1b" },
     ],
     opposites: {
-      christianity: ["atheism", "islam"], islam: ["atheism", "christianity"],
-      atheism: ["christianity", "islam", "hinduism", "buddhism", "spiritual"],
-      agnosticism: ["christianity", "islam"], buddhism: ["atheism"],
-      hinduism: ["atheism", "islam"], judaism: ["atheism", "islam"],
-      spiritual: ["atheism"],
+      christianity: ["atheism", "islam", "satanism"], catholicism: ["atheism", "protestantism", "satanism"], islam: ["atheism", "christianity", "hinduism"],
+      judaism: ["atheism", "islam"], hinduism: ["atheism", "islam"], buddhism: ["atheism", "satanism"],
+      sikhism: ["atheism"], atheism: ["christianity", "catholicism", "islam", "judaism", "hinduism", "buddhism", "spiritual", "mormonism", "scientology"],
+      agnosticism: ["christianity", "islam", "scientology"], spiritual: ["atheism", "scientology"],
+      mormonism: ["atheism", "catholicism"], orthodoxChristianity: ["atheism", "protestantism"],
+      protestantism: ["atheism", "catholicism", "orthodoxChristianity"], jehovahsWitness: ["atheism", "satanism"],
+      paganism: ["christianity", "islam", "atheism"], taoism: ["atheism", "satanism"],
+      shinto: ["atheism", "islam"], jainism: ["atheism", "satanism"],
+      zoroastrianism: ["atheism", "satanism"], bahai: ["atheism"],
+      rastafari: ["atheism", "scientology"], scientology: ["atheism", "agnosticism", "spiritual"],
+      deism: ["atheism", "christianity", "scientology"], satanism: ["christianity", "catholicism", "islam", "judaism", "buddhism"],
     },
   },
 };
 
-// Debate topic pools
+// Debate topic pools — stance-aware prompts per category
 export const DEBATE_TOPICS: Record<string, { general: string[]; stancePairs: Record<string, string[]> }> = {
   politics: {
-    general: ["Should voting be mandatory?", "Is the two-party system broken?", "Should there be term limits for Congress?"],
+    general: ["Should voting be mandatory?", "Is the two-party system broken?", "Should there be term limits for Congress?", "Does the electoral college still make sense?", "Should the voting age be lowered to 16?"],
     stancePairs: {
-      "democrat|republican": ["Is big government the solution or the problem?", "Should taxes on the wealthy be increased?", "Gun control: safety measure or rights violation?"],
-      "libertarian|democrat": ["Should the government regulate social media?", "Is the welfare state helping or hurting?"],
+      "democrat|republican": ["Is big government the solution or the problem?", "Should taxes on the wealthy be increased?", "Gun control: safety measure or rights violation?", "Is universal healthcare a right or a pipe dream?", "Immigration: open borders or secure borders?", "Should student loans be forgiven?"],
+      "libertarian|democrat": ["Should the government regulate social media?", "Is the welfare state helping or hurting?", "Should drugs be fully decriminalized?"],
+      "libertarian|republican": ["Should the government have any role in marriage?", "Is military spending out of control?", "Should we abolish the Federal Reserve?"],
     },
   },
   economics: {
-    general: ["Is inflation always a monetary phenomenon?", "Should we return to the gold standard?", "Is UBI inevitable?"],
+    general: ["Is inflation always a monetary phenomenon?", "Should we return to the gold standard?", "Is UBI inevitable?", "Are we heading for a recession?", "Is the stock market rigged?"],
     stancePairs: {
-      "capitalist|socialist": ["Should billionaires exist?", "Is profit inherently exploitative?", "Does trickle-down economics work?"],
-      "keynesian|austrian": ["Should governments run deficits during recessions?", "Is central banking a net positive?"],
+      "capitalist|socialist": ["Should billionaires exist?", "Is profit inherently exploitative?", "Private healthcare vs single-payer: which delivers?", "Should workers own the means of production?", "Is wealth inequality the biggest threat to society?", "Does trickle-down economics work?"],
+      "keynesian|austrian": ["Should governments run deficits during recessions?", "Is central banking a net positive?", "Does government spending actually stimulate growth?", "Are bailouts ever justified?"],
+    },
+  },
+  technology: {
+    general: ["Will AI replace most jobs in 10 years?", "Is social media destroying society?", "Should tech companies be broken up?", "Is privacy dead in the digital age?"],
+    stancePairs: {
+      "techOptimist|techSkeptic": ["Is technology making us smarter or dumber?", "Are smartphones ruining human connection?", "Is Silicon Valley a force for good?", "Should kids have access to smartphones?"],
+      "aiAccelerationist|aiCautious": ["Should we pause AI development?", "Is AGI an existential risk or humanity's greatest tool?", "Should AI be open-sourced or regulated?", "Will AI make inequality worse or better?", "Is AI art real art?"],
     },
   },
   philosophy: {
-    general: ["Is free will an illusion?", "Does objective morality exist?", "Is consciousness just an emergent property?"],
+    general: ["Is free will an illusion?", "Does objective morality exist?", "Is consciousness just an emergent property?", "Can you live a meaningful life without purpose?"],
     stancePairs: {
-      "rationalist|empiricist": ["Can we know anything without experience?", "Is math discovered or invented?"],
-      "nihilist|existentialist": ["Does life have inherent meaning?", "Is creating your own meaning just cope?"],
+      "rationalist|empiricist": ["Can we know anything without experience?", "Is math discovered or invented?", "Are thought experiments valid evidence?"],
+      "nihilist|existentialist": ["Does life have inherent meaning?", "Is creating your own meaning just cope?", "Is optimism rational or delusional?"],
+    },
+  },
+  culture: {
+    general: ["Is cancel culture real?", "Are gender roles natural or constructed?", "Is modern music worse than older music?", "Should art be separated from the artist?"],
+    stancePairs: {
+      "progressive|conservative": ["Is tradition worth preserving?", "Should society change faster or slower?", "Are Western values universal?", "Is political correctness helping or hurting?", "Is meritocracy a myth?"],
+      "traditionalist|modernist": ["Was life better 50 years ago?", "Is the nuclear family the ideal structure?", "Has feminism gone too far?", "Is religion necessary for morality?"],
+    },
+  },
+  sports: {
+    general: ["Is the GOAT debate even possible?", "Should college athletes be paid?", "Are sports leagues too commercialized?", "Is esports a real sport?"],
+    stancePairs: {
+      "statsFirst|eyeTest": ["Do analytics ruin the fun of sports?", "Can stats capture clutch performance?", "Is the eye test more reliable than advanced metrics?"],
+      "oldSchool|newEra": ["Were athletes tougher in the past?", "Is load management ruining competition?", "Are modern records less impressive due to technology?"],
+    },
+  },
+  conspiracy: {
+    general: ["Is the government hiding alien contact?", "Are we living in a simulation?", "Is the media trustworthy?", "Do secret societies control the world?"],
+    stancePairs: {
+      "believer|skeptic": ["Is questioning the narrative dangerous or necessary?", "Are conspiracy theorists paranoid or ahead of the curve?", "Should the government declassify everything?"],
+      "believer|debunker": ["Is the moon landing real?", "Are pharmaceutical companies suppressing cures?", "Is climate change exaggerated for control?", "Was 9/11 an inside job?"],
+    },
+  },
+  unpopular: {
+    general: ["Most people are NPCs", "College is a scam for most people", "Social media should require ID verification", "Democracy is overrated"],
+    stancePairs: {
+      "contrarian|mainstream": ["Is going against the grain just edgy, or is it necessary?", "Are popular opinions popular because they're right?", "Is conformity the real danger?"],
+      "radical|centrist": ["Is centrism just cowardice?", "Do radical ideas move society forward?", "Is compromise always the answer?"],
+    },
+  },
+  pill: {
+    general: ["Which pill ideology is the most accurate worldview?", "Are pill ideologies helpful or reductive?", "Is the matrix metaphor overused?"],
+    stancePairs: {
+      "redPill|bluePill": ["Is ignorance bliss?", "Is 'waking up' worth the cost?", "Are red-pillers seeing reality or just a different narrative?", "Is the mainstream view comfortable but wrong?"],
+      "blackPill|whitePill": ["Is humanity doomed or redeemable?", "Can individual action change systemic problems?", "Is hope rational or naive?"],
+    },
+  },
+  religion: {
+    general: ["Can morality exist without religion?", "Should religion influence law?", "Is organized religion a net positive for humanity?", "Can science and faith coexist?"],
+    stancePairs: {
+      "christianity|atheism": ["Does God exist?", "Is the Bible literally true?", "Is faith a virtue or a weakness?", "Can atheists have objective morality?"],
+      "islam|atheism": ["Is Islam compatible with Western values?", "Does secularism lead to moral decay?", "Is religious law ever justified in modern society?"],
+      "christianity|islam": ["Is there one true religion?", "Can interfaith dialogue solve global conflict?", "Are Abrahamic religions more alike than different?"],
     },
   },
   anything: {
-    general: ["What's the most overrated thing in society?", "Is humanity getting better or worse?", "Should we colonize Mars?", "Is the American Dream dead?", "Is social media a net negative?"],
+    general: ["What's the most overrated thing in society?", "Is humanity getting better or worse?", "Should we colonize Mars?", "Is the American Dream dead?", "Are we in a simulation?", "Is social media a net negative?", "Should voting be mandatory?", "Is privacy dead?"],
     stancePairs: {},
   },
 };
+
+// ===== DEBATE FORMATS =====
+export const DEBATE_FORMATS = {
+  unstructured: {
+    id: "unstructured",
+    label: "Open Mic",
+    icon: "🎙️",
+    description: "No rules. Talk over each other. Pure chaos.",
+    rounds: null,
+    totalTime: null,
+  },
+  standard: {
+    id: "standard",
+    label: "Standard Debate",
+    icon: "⚖️",
+    description: "Opening → Rebuttals → Cross-exam → Closing",
+    rounds: [
+      { name: "Opening Statement", speaker: "A", duration: 120, description: "Side A presents their position" },
+      { name: "Opening Statement", speaker: "B", duration: 120, description: "Side B presents their position" },
+      { name: "Rebuttal", speaker: "A", duration: 90, description: "Side A responds to Side B" },
+      { name: "Rebuttal", speaker: "B", duration: 90, description: "Side B responds to Side A" },
+      { name: "Cross-Examination", speaker: "both", duration: 180, description: "Open back-and-forth questioning" },
+      { name: "Closing Statement", speaker: "A", duration: 60, description: "Side A final remarks" },
+      { name: "Closing Statement", speaker: "B", duration: 60, description: "Side B final remarks" },
+    ],
+    totalTime: 720,
+  },
+  quick: {
+    id: "quick",
+    label: "Quick Fire",
+    icon: "⚡",
+    description: "2-min rounds. Fast. No filler.",
+    rounds: [
+      { name: "Side A Speaks", speaker: "A", duration: 120, description: "Make your case" },
+      { name: "Side B Speaks", speaker: "B", duration: 120, description: "Make your case" },
+      { name: "Rebuttal A", speaker: "A", duration: 60, description: "Quick counter" },
+      { name: "Rebuttal B", speaker: "B", duration: 60, description: "Quick counter" },
+      { name: "Free-for-all", speaker: "both", duration: 120, description: "No holds barred" },
+    ],
+    totalTime: 480,
+  },
+  lincoln: {
+    id: "lincoln",
+    label: "Lincoln-Douglas",
+    icon: "🎩",
+    description: "Classic format. Long-form. For serious debaters.",
+    rounds: [
+      { name: "Affirmative Constructive", speaker: "A", duration: 360, description: "Build your full argument" },
+      { name: "Cross-Examination", speaker: "B", duration: 180, description: "Side B questions Side A" },
+      { name: "Negative Constructive", speaker: "B", duration: 420, description: "Counter-argument + rebuttal" },
+      { name: "Cross-Examination", speaker: "A", duration: 180, description: "Side A questions Side B" },
+      { name: "First Affirmative Rebuttal", speaker: "A", duration: 240, description: "Respond and rebuild" },
+      { name: "Negative Rebuttal", speaker: "B", duration: 360, description: "Final negative case" },
+      { name: "Second Affirmative Rebuttal", speaker: "A", duration: 180, description: "Last word" },
+    ],
+    totalTime: 1920,
+  },
+};
+
+// ===== JURY CATEGORIES =====
+export const JURY_CATEGORIES = [
+  { id: "bestArgument", label: "Best Argument", icon: "🧠", description: "Most logical and well-structured points" },
+  { id: "mostPersuasive", label: "Most Persuasive", icon: "🎯", description: "Changed minds or held the room" },
+  { id: "bestFacts", label: "Best Use of Facts", icon: "📊", description: "Backed up claims with evidence" },
+  { id: "bestMoment", label: "Best Moment", icon: "🔥", description: "The single best moment of the debate" },
+];
+
+// ===== CLIP BOUNTY PRESETS =====
+export const BOUNTY_PRESETS = [
+  { label: "Clip that!", cost: 25, icon: "✂️" },
+  { label: "Fact check this!", cost: 50, icon: "🔍" },
+  { label: "Best comeback", cost: 75, icon: "🔥" },
+  { label: "Finish them!", cost: 100, icon: "💀" },
+];
+
+// ===== GIFT ITEMS =====
+export const GIFT_ITEMS = [
+  { emoji: "⚡", name: "Zap", cost: 10 },
+  { emoji: "🔥", name: "Fire", cost: 50 },
+  { emoji: "💎", name: "Diamond", cost: 100 },
+  { emoji: "👑", name: "Crown", cost: 500 },
+  { emoji: "🏆", name: "Trophy", cost: 1000 },
+];
+
+// ===== FACTION MOTTOS =====
+export const FACTION_MOTTOS: Record<string, string> = {
+  // Politics
+  democrat: "Progress through policy", republican: "Tradition and freedom", libertarian: "Don't tread on me", independent: "Free from party lines",
+  // Economics
+  capitalist: "Free markets, free people", socialist: "Power to the workers", keynesian: "Smart spending wins", austrian: "Sound money, sound logic",
+  // Technology
+  aiAccelerationist: "Build it faster", aiCautious: "Slow down and think", techOptimist: "Tech saves everything", techSkeptic: "Question the machine",
+  // Philosophy
+  rationalist: "Logic above all", empiricist: "Show me the data", existentialist: "Create your own meaning", nihilist: "Nothing matters, debate anyway",
+  // Culture
+  progressive: "Forward, always", conservative: "Preserve what works", traditionalist: "Roots run deep", modernist: "Embrace the new", centrist: "Balance is strength",
+  // Sports
+  statsFirst: "Numbers don't lie", eyeTest: "Trust what you see", oldSchool: "Respect the game", newEra: "Evolution is inevitable",
+  // Conspiracy
+  believer: "Question everything", skeptic: "Prove it", debunker: "Facts over fiction", openMinded: "Truth is somewhere",
+  // Unpopular
+  contrarian: "Against the grain", radical: "Burn it down", mainstream: "Popular for a reason",
+  // Pill
+  redPill: "Hard truths only", bluePill: "Comfort in the known", blackPill: "Nothing matters anyway", whitePill: "Optimism wins",
+  purplePill: "Take from both sides", greyPill: "Nuance over narrative", greenPill: "Growth mindset", pinkPill: "Self-improvement first",
+  // Religion
+  christianity: "Faith and grace", islam: "Submission to truth", judaism: "Covenant and debate", hinduism: "Many paths, one truth",
+  buddhism: "Middle way", sikhism: "Service and equality", atheism: "Reason over faith", agnosticism: "Honest uncertainty",
+  spiritual: "Inner truth", deism: "The clockmaker's world",
+};
+
+// ===== FAKE DATA FOR BROWSE/LEADERBOARD =====
+export const FAKE_USERS = [
+  { name: "DebateKing_42", elo: 1847, wins: 142, losses: 58, followers: 12400, color: "#10b981", categories: ["politics", "economics"], stances: { politics: "republican", economics: "capitalist", culture: "conservative", religion: "christianity" } },
+  { name: "LogicLord", elo: 1723, wins: 98, losses: 45, followers: 8700, color: "#8B4513", categories: ["philosophy", "technology"], stances: { philosophy: "rationalist", technology: "aiAccelerationist", economics: "austrian", religion: "atheism" } },
+  { name: "FreeThinker99", elo: 1695, wins: 201, losses: 112, followers: 15200, color: "#00f593", categories: ["conspiracy", "unpopular"], stances: { conspiracy: "believer", unpopular: "contrarian", politics: "libertarian", pill: "redPill" } },
+  { name: "DevilsAdvocate", elo: 1654, wins: 88, losses: 52, followers: 6300, color: "#ffb74d", categories: ["politics", "philosophy"], stances: { politics: "democrat", philosophy: "existentialist", culture: "progressive", pill: "bluePill" } },
+  { name: "PolicyWonk", elo: 1612, wins: 76, losses: 48, followers: 4800, color: "#64b5f6", categories: ["politics", "economics"], stances: { politics: "democrat", economics: "keynesian", technology: "techOptimist", religion: "agnosticism" } },
+  { name: "SkepticalMind", elo: 1589, wins: 134, losses: 89, followers: 9100, color: "#8B4513", categories: ["philosophy", "conspiracy"], stances: { philosophy: "empiricist", conspiracy: "skeptic", technology: "techSkeptic", religion: "buddhism" } },
+  { name: "RationalRex", elo: 1567, wins: 67, losses: 39, followers: 3200, color: "#ffd43b", categories: ["technology", "economics"], stances: { technology: "techOptimist", economics: "capitalist", philosophy: "rationalist" } },
+  { name: "ThinkTankTina", elo: 1545, wins: 112, losses: 78, followers: 7600, color: "#4dd0e1", categories: ["culture", "politics"], stances: { culture: "progressive", politics: "democrat", economics: "socialist", religion: "spiritual" } },
+  { name: "MarketBull", elo: 1534, wins: 55, losses: 33, followers: 11200, color: "#ff7043", categories: ["economics", "technology"], stances: { economics: "capitalist", technology: "aiAccelerationist", sports: "statsFirst" } },
+  { name: "BearCase", elo: 1498, wins: 44, losses: 30, followers: 5400, color: "#ab47bc", categories: ["economics", "politics"], stances: { economics: "keynesian", politics: "independent", culture: "modernist" } },
+  { name: "AlphaDebater", elo: 1476, wins: 89, losses: 67, followers: 4100, color: "#26c6da", categories: ["sports", "culture"], stances: { sports: "eyeTest", culture: "conservative", unpopular: "mainstream" } },
+  { name: "ContraryView", elo: 1455, wins: 38, losses: 28, followers: 2800, color: "#ef5350", categories: ["unpopular", "philosophy"], stances: { unpopular: "contrarian", philosophy: "nihilist", conspiracy: "openMinded", pill: "blackPill" } },
+  { name: "SigmaGrind", elo: 1423, wins: 156, losses: 134, followers: 18900, color: "#66bb6a", categories: ["culture", "sports"], stances: { culture: "traditionalist", sports: "oldSchool", politics: "republican", pill: "redPill", religion: "islam" } },
+  { name: "W_Takes_Only", elo: 1401, wins: 72, losses: 61, followers: 8200, color: "#ffa726", categories: ["conspiracy", "unpopular"], stances: { conspiracy: "believer", unpopular: "radical", philosophy: "nihilist", pill: "blackPill" } },
+  { name: "RizzDebater", elo: 1388, wins: 33, losses: 25, followers: 22100, color: "#42a5f5", categories: ["culture", "sports"], stances: { culture: "modernist", sports: "newEra", technology: "techOptimist", pill: "pinkPill" } },
+  { name: "TouchGrass420", elo: 1367, wins: 29, losses: 24, followers: 3100, color: "#7e57c2", categories: ["conspiracy", "technology"], stances: { conspiracy: "debunker", technology: "aiCautious", economics: "socialist", pill: "greenPill" } },
+];
+
+export const STREAM_TITLES = [
+  "HEATED: Capitalism vs Socialism - who cooks?",
+  "Is AI going to replace your job? No filter.",
+  "Hot takes on the housing market - come at me",
+  "Crypto dead or sleeping? Open mic",
+  "Say whatever you want - ZERO censorship",
+  "Debating strangers until I lose",
+  "Election year takes - unfiltered",
+  "Billionaires shouldn't exist - change my mind",
+  "Is college a scam? Real talk no cap",
+  "OPEN MIC: Any topic. Any opinion. No rules.",
+  "Conspiracy hour - come with receipts",
+  "Unpopular opinions ONLY - soft people DNE",
+];
+
+export const SCHEDULED_EVENTS = [
+  { id: 1, title: "DebateKing_42 vs LogicLord - The Rematch", time: "Tonight 9PM EST", host: "DebateKing_42", interested: 2340, category: "anything" },
+  { id: 2, title: "Open Mic Monday - Unpopular Opinions Only", time: "Monday 8PM EST", host: "FreeThinker99", interested: 1820, category: "unpopular" },
+  { id: 3, title: "Bull vs Bear: Market Predictions Q2", time: "Wednesday 7PM EST", host: "MarketBull", interested: 3100, category: "economics" },
+  { id: 4, title: "Conspiracy Deep Dive - Moon Landing Edition", time: "Friday 10PM EST", host: "SigmaGrind", interested: 4200, category: "conspiracy" },
+];
+
+export const CLIPS = [
+  { id: 1, user: "DebateKing_42", title: "Absolutely destroyed his argument", views: 45200, likes: 3400, duration: 28, timeAgo: "2h ago" },
+  { id: 2, user: "FreeThinker99", title: "The crowd went WILD after this take", views: 31800, likes: 2100, duration: 22, timeAgo: "4h ago" },
+  { id: 3, user: "LogicLord", title: "When the facts don't care about feelings", views: 28400, likes: 1800, duration: 30, timeAgo: "6h ago" },
+  { id: 4, user: "SigmaGrind", title: "Most unhinged argument I've ever heard", views: 67300, likes: 5200, duration: 15, timeAgo: "8h ago" },
+  { id: 5, user: "RizzDebater", title: "Bro changed his mind mid-debate", views: 52100, likes: 4100, duration: 26, timeAgo: "12h ago" },
+  { id: 6, user: "DevilsAdvocate", title: "This is why people watch Common Ground", views: 89700, likes: 7800, duration: 19, timeAgo: "1d ago" },
+];
+
+// Helper to format viewer counts
+export const formatViewers = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toString();
+export const formatNumber = (n: number) => n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toString();
+export const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
