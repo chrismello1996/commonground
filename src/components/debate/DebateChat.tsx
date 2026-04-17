@@ -3,6 +3,17 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+const EMOTES = [
+  { emoji: "👏", label: "Clap" },
+  { emoji: "🔥", label: "Fire" },
+  { emoji: "💯", label: "100" },
+  { emoji: "😂", label: "Laugh" },
+  { emoji: "🤔", label: "Think" },
+  { emoji: "👎", label: "Disagree" },
+  { emoji: "🎯", label: "Bullseye" },
+  { emoji: "💀", label: "Dead" },
+];
+
 interface ChatMessage {
   id: string;
   debate_id: string;
@@ -105,6 +116,20 @@ export default function DebateChat({
     setIsSending(false);
   };
 
+  const sendEmote = async (emoji: string) => {
+    if (isSending || !isActive) return;
+    setIsSending(true);
+
+    await supabase.from("messages").insert({
+      debate_id: debateId,
+      user_id: currentUserId,
+      content: emoji,
+      type: "emote",
+    });
+
+    setIsSending(false);
+  };
+
   return (
     <div className="flex flex-col h-full bg-gray-900 border-l border-gray-800">
       {/* Chat header */}
@@ -132,6 +157,17 @@ export default function DebateChat({
             );
           }
 
+          if (msg.type === "emote") {
+            return (
+              <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                <span className={`text-[10px] mb-0.5 ${isMe ? "text-emerald-500" : "text-red-400"}`}>
+                  {msg.username || (isMe ? currentUsername : "Opponent")}
+                </span>
+                <div className="text-3xl py-1 px-2">{msg.content}</div>
+              </div>
+            );
+          }
+
           return (
             <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
               <span className={`text-[10px] mb-0.5 ${isMe ? "text-emerald-500" : "text-red-400"}`}>
@@ -149,6 +185,23 @@ export default function DebateChat({
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Emote bar */}
+      {isActive && (
+        <div className="px-4 py-2 border-t border-gray-800 flex gap-1 flex-wrap justify-center">
+          {EMOTES.map((emote) => (
+            <button
+              key={emote.emoji}
+              onClick={() => sendEmote(emote.emoji)}
+              disabled={isSending}
+              className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 flex items-center justify-center text-base transition-colors disabled:opacity-50"
+              title={emote.label}
+            >
+              {emote.emoji}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Input */}
       <form onSubmit={sendMessage} className="px-4 py-3 border-t border-gray-800">
