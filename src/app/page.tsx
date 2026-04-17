@@ -49,9 +49,13 @@ export default async function HomePage() {
         <div className="flex gap-4 mb-10 flex-wrap justify-center">
           <Link
             href={stanceCount > 0 ? "/debate" : "/stances"}
-            className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+            className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group"
           >
-            <div className="text-3xl mb-3 text-emerald-500">⚡</div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-500/20 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
             <h3 className="text-sm font-bold text-gray-900 mb-1">
               {stanceCount > 0 ? "Find a Debate" : "Pick Stances First"}
             </h3>
@@ -63,9 +67,14 @@ export default async function HomePage() {
           </Link>
           <Link
             href="/browse"
-            className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+            className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group"
           >
-            <div className="text-3xl mb-3 text-emerald-500">👁️</div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-500/20 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </div>
             <h3 className="text-sm font-bold text-gray-900 mb-1">Browse Live</h3>
             <p className="text-[11px] text-gray-500 leading-snug">
               Watch live debates and vote for the winner
@@ -74,9 +83,15 @@ export default async function HomePage() {
           {stanceCount > 0 && (
             <Link
               href="/stances"
-              className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer"
+              className="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 w-52 text-center hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group"
             >
-              <div className="text-3xl mb-3 text-emerald-500">🎯</div>
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-500/20 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                  <circle cx="12" cy="12" r="10"/>
+                  <circle cx="12" cy="12" r="6"/>
+                  <circle cx="12" cy="12" r="2"/>
+                </svg>
+              </div>
               <h3 className="text-sm font-bold text-gray-900 mb-1">Edit Stances</h3>
               <p className="text-[11px] text-gray-500 leading-snug">
                 Update your positions on topics
