@@ -43,6 +43,9 @@ export default async function HomePage() {
           <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">
             Get matched for live video conversation. Zero censorship. The audience votes. Your ELO rises or falls.
           </p>
+          <p className="text-xs text-gray-400 mt-2 italic">
+            CommonGround is for debate. Keep your clothes on. Everything else is fair game.
+          </p>
         </div>
 
         {/* Match Options */}
