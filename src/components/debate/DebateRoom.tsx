@@ -6,6 +6,7 @@ import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from
 import { STANCE_OPTIONS } from "@/utils/constants";
 import VideoTile from "./VideoTile";
 import DebateChat from "./DebateChat";
+import ReportButton from "./ReportButton";
 
 interface DebateUser {
   id: string;
@@ -441,6 +442,15 @@ export default function DebateRoom({
             >
               {isCamOn ? "📷" : "📷"}
             </button>
+
+            {/* Report opponent */}
+            {isActive && (
+              <ReportButton
+                reportedUserId={opponent.id}
+                reportedUsername={opponent.username}
+                debateId={debateId}
+              />
+            )}
 
             {/* Skip / Next opponent */}
             {isActive && (

@@ -21,6 +21,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing userId or category" }, { status: 400 });
     }
 
+    // Check if user is suspended
+    const supabaseCheck = await createClient();
+    const { data: userProfile } = await supabaseCheck
+      .from("users")
+      .select("suspended_until, suspension_reason")
+      .eq("id", userId)
+      .single();
+
+    if (userProfile?.suspended_until && new Date(userProfile.suspended_until) > new Date()) {
+      return NextResponse.json(
+        {
+          error: "Your account is suspended",
+          suspended_until: userProfile.suspended_until,
+          reason: userProfile.suspension_reason,
+        },
+        { status: 403 }
+      );
+    }
+
     // Get all current queue entries
     const queueRaw = await redis.lrange(QUEUE_KEY, 0, -1);
     const queue: QueueEntry[] = queueRaw.map((entry) =>

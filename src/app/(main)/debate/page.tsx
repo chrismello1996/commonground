@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-type QueueStatus = "joining" | "searching" | "matched" | "error";
+type QueueStatus = "joining" | "searching" | "matched" | "error" | "suspended";
 
 const SEARCH_MESSAGES = [
   "Looking for an opponent…",
@@ -21,6 +21,7 @@ export default function DebateLobbyPage() {
 
   const [status, setStatus] = useState<QueueStatus>("joining");
   const [error, setError] = useState<string | null>(null);
+  const [suspendedUntil, setSuspendedUntil] = useState<string | null>(null);
   const [searchTime, setSearchTime] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
@@ -50,6 +51,13 @@ export default function DebateLobbyPage() {
         });
 
         const data = await res.json();
+
+        if (res.status === 403 && data.suspended_until) {
+          setSuspendedUntil(data.suspended_until);
+          setError(data.reason || "Your account is suspended");
+          setStatus("suspended");
+          return;
+        }
 
         if (!res.ok) {
           setError(data.error || "Failed to join queue");
@@ -130,6 +138,13 @@ export default function DebateLobbyPage() {
 
       const data = await res.json();
 
+      if (res.status === 403 && data.suspended_until) {
+        setSuspendedUntil(data.suspended_until);
+        setError(data.reason || "Your account is suspended");
+        setStatus("suspended");
+        return;
+      }
+
       if (!res.ok) {
         setError(data.error || "Failed to join queue");
         setStatus("error");
@@ -192,6 +207,37 @@ export default function DebateLobbyPage() {
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        {/* SUSPENDED STATE */}
+        {status === "suspended" && (
+          <div className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h2 className="text-xl font-extrabold text-gray-900 mb-2">
+              Account Suspended
+            </h2>
+            <p className="text-sm text-red-500 mb-2">{error}</p>
+            {suspendedUntil && (
+              <p className="text-xs text-gray-500 mb-6">
+                Suspension expires:{" "}
+                <span className="font-mono font-bold">
+                  {new Date(suspendedUntil).getFullYear() > 2090
+                    ? "Permanent"
+                    : new Date(suspendedUntil).toLocaleString()}
+                </span>
+              </p>
+            )}
+            <Link
+              href="/"
+              className="px-6 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-500 hover:border-gray-300 transition-all"
+            >
+              Go Home
+            </Link>
+          </div>
+        )}
+
         {/* ERROR STATE */}
         {status === "error" && (
           <div className="flex flex-col items-center text-center">

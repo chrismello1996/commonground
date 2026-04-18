@@ -10,8 +10,14 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [showAgeWarning, setShowAgeWarning] = useState(false);
 
   const signInWithGoogle = async () => {
+    if (!ageConfirmed) {
+      setShowAgeWarning(true);
+      return;
+    }
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -102,10 +108,38 @@ function LoginForm() {
             </div>
           )}
 
+          {/* Age Verification Checkbox */}
+          <label className="flex items-start gap-2.5 mb-4 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={ageConfirmed}
+              onChange={(e) => {
+                setAgeConfirmed(e.target.checked);
+                if (e.target.checked) setShowAgeWarning(false);
+              }}
+              className="mt-0.5 w-4 h-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+            />
+            <span className="text-[12px] text-gray-600 leading-relaxed">
+              I confirm that I am <strong>at least 18 years old</strong> and I agree to the{" "}
+              <a href="/terms" target="_blank" className="text-emerald-500 hover:underline">Terms of Service</a> and{" "}
+              <a href="/privacy" target="_blank" className="text-emerald-500 hover:underline">Privacy Policy</a>.
+            </span>
+          </label>
+
+          {showAgeWarning && (
+            <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-3 py-2 mb-4 text-[12px] font-medium">
+              You must confirm you are 18+ and agree to the Terms to continue.
+            </div>
+          )}
+
           {/* Google Button */}
           <button
             onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition"
+            className={`w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border-2 rounded-lg text-sm font-semibold transition ${
+              ageConfirmed
+                ? "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                : "border-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -122,7 +156,7 @@ function LoginForm() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
-              AI-moderated video
+              Community-moderated
             </span>
             <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full border border-gray-200">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -141,7 +175,12 @@ function LoginForm() {
           </div>
 
           {mode === "signin" ? (
-            <form className="space-y-3">
+            <form className="space-y-3" onSubmit={(e) => {
+              if (!ageConfirmed) {
+                e.preventDefault();
+                setShowAgeWarning(true);
+              }
+            }}>
               <input
                 id="email"
                 name="email"
@@ -160,13 +199,22 @@ function LoginForm() {
               />
               <button
                 formAction={login}
-                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-lg transition"
+                className={`w-full py-2.5 font-bold text-sm rounded-lg transition ${
+                  ageConfirmed
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                }`}
               >
                 Sign In
               </button>
             </form>
           ) : (
-            <form className="space-y-3">
+            <form className="space-y-3" onSubmit={(e) => {
+              if (!ageConfirmed) {
+                e.preventDefault();
+                setShowAgeWarning(true);
+              }
+            }}>
               <input
                 name="username"
                 type="text"
@@ -194,7 +242,11 @@ function LoginForm() {
               />
               <button
                 formAction={signup}
-                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-lg transition"
+                className={`w-full py-2.5 font-bold text-sm rounded-lg transition ${
+                  ageConfirmed
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                }`}
               >
                 Create Account
               </button>
@@ -204,8 +256,8 @@ function LoginForm() {
           {/* Footer */}
           <p className="text-[10px] text-gray-400 text-center mt-4 leading-relaxed">
             By continuing, you agree to CommonGround&apos;s{" "}
-            <a href="#" className="text-emerald-500 hover:underline">Terms of Service</a> and{" "}
-            <a href="#" className="text-emerald-500 hover:underline">Privacy Policy</a>
+            <a href="/terms" target="_blank" className="text-emerald-500 hover:underline">Terms of Service</a> and{" "}
+            <a href="/privacy" target="_blank" className="text-emerald-500 hover:underline">Privacy Policy</a>
           </p>
         </div>
       </div>
