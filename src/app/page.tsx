@@ -162,7 +162,12 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 py-5 px-4 text-center text-xs text-gray-400">
-        CommonGround &copy; {new Date().getFullYear()} &mdash; Free speech through fair debate.
+        <p>CommonGround &copy; {new Date().getFullYear()} &mdash; Free speech through fair debate.</p>
+        <p className="mt-1">
+          <Link href="/terms" className="text-emerald-500 hover:underline">Terms of Service</Link>
+          {" · "}
+          <Link href="/privacy" className="text-emerald-500 hover:underline">Privacy Policy</Link>
+        </p>
       </footer>
     </div>
   );
