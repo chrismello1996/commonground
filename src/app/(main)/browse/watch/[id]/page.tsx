@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FAKE_USERS, STREAM_TITLES, formatViewers, formatTime } from "@/utils/constants";
 
 // Same stream data as browse page
@@ -17,11 +17,22 @@ const LIVE_STREAMS = [
 
 export default function WatchPage() {
   const params = useParams();
+  const router = useRouter();
   const streamId = parseInt(params.id as string, 10);
-  const stream = LIVE_STREAMS.find((s) => s.id === streamId);
+  const currentIndex = LIVE_STREAMS.findIndex((s) => s.id === streamId);
+  const stream = currentIndex >= 0 ? LIVE_STREAMS[currentIndex] : undefined;
+  const prevStream = currentIndex > 0 ? LIVE_STREAMS[currentIndex - 1] : null;
+  const nextStream = currentIndex < LIVE_STREAMS.length - 1 ? LIVE_STREAMS[currentIndex + 1] : null;
 
   const [votedFor, setVotedFor] = useState<"A" | "B" | null>(null);
   const [elapsed, setElapsed] = useState(stream?.timeElapsed || 0);
+
+  // Reset state when navigating between debates
+  useEffect(() => {
+    setVotedFor(null);
+    setElapsed(stream?.timeElapsed || 0);
+  }, [streamId, stream?.timeElapsed]);
+
   const [chatMessages] = useState([
     { user: "SpectatorX", msg: "This is getting heated!", time: "2m ago" },
     { user: "DebateFan", msg: "Great point about market dynamics", time: "1m ago" },
@@ -76,6 +87,29 @@ export default function WatchPage() {
               {formatViewers(stream.viewers)}
             </span>
             <span className="text-[11px] text-gray-500 font-mono">{formatTime(elapsed)}</span>
+            {/* Prev / Next buttons */}
+            <div className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
+              <button
+                onClick={() => prevStream && router.push(`/browse/watch/${prevStream.id}`)}
+                disabled={!prevStream}
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Previous debate"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </button>
+              <button
+                onClick={() => nextStream && router.push(`/browse/watch/${nextStream.id}`)}
+                disabled={!nextStream}
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Next debate"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
