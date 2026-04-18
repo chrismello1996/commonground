@@ -36,3 +36,11 @@ export interface Message {
   type: "chat" | "system" | "emote";
   created_at: string;
 }
+
+export interface DebateVote {
+  id: string;
+  debate_id: string;
+  voter_id: string;
+  voted_for: string;
+  created_at: string;
+}

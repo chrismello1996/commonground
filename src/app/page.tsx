@@ -102,7 +102,7 @@ export default async function HomePage() {
 
         {/* Stats Row */}
         {profile && (
-          <div className="grid grid-cols-3 gap-4 max-w-md w-full mb-10">
+          <div className="grid grid-cols-4 gap-4 max-w-lg w-full mb-10">
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
               <p className="text-2xl font-black text-emerald-500">{profile.elo}</p>
               <p className="text-[11px] text-gray-400 mt-1 font-medium">ELO Rating</p>
@@ -112,6 +112,10 @@ export default async function HomePage() {
                 {profile.wins}/{profile.losses}
               </p>
               <p className="text-[11px] text-gray-400 mt-1 font-medium">W/L Record</p>
+            </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
+              <p className="text-2xl font-black text-amber-500">{profile.total_votes_received || 0}</p>
+              <p className="text-[11px] text-gray-400 mt-1 font-medium">Total Votes</p>
             </div>
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
               <p className="text-2xl font-black text-gray-900">{stanceCount}</p>

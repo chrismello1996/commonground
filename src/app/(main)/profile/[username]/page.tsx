@@ -79,7 +79,7 @@ export default async function ProfilePage({
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <div className="text-center py-2.5 bg-gray-100 rounded-lg">
             <p className="text-lg font-extrabold text-emerald-500">{profile.elo}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">ELO</p>
@@ -91,6 +91,10 @@ export default async function ProfilePage({
           <div className="text-center py-2.5 bg-gray-100 rounded-lg">
             <p className="text-lg font-extrabold text-red-500">{profile.losses || 0}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">Losses</p>
+          </div>
+          <div className="text-center py-2.5 bg-gray-100 rounded-lg">
+            <p className="text-lg font-extrabold text-amber-500">{profile.total_votes_received || 0}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Votes</p>
           </div>
           <div className="text-center py-2.5 bg-gray-100 rounded-lg">
             <p className="text-lg font-extrabold text-gray-900">{profile.followers || 0}</p>
