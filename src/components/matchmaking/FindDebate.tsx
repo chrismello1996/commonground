@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CATEGORY_TAGS, STANCE_OPTIONS } from "@/utils/constants";
+import { STANCE_OPTIONS } from "@/utils/constants";
+import Link from "next/link";
 
 interface FindDebateProps {
   userId: string;
@@ -11,7 +12,7 @@ interface FindDebateProps {
   userStances: Record<string, string>;
 }
 
-type MatchState = "idle" | "selecting" | "queued" | "matched";
+type MatchState = "idle" | "queued" | "matched";
 
 interface MatchData {
   debateId: string;
@@ -26,13 +27,24 @@ interface MatchData {
 
 export default function FindDebate({ username, elo, userStances }: FindDebateProps) {
   const router = useRouter();
-  const [state, setState] = useState<MatchState>("selecting");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [state, setState] = useState<MatchState>("idle");
   const [matchData, setMatchData] = useState<MatchData | null>(null);
   const [searchTime, setSearchTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stanceCount = Object.keys(userStances).length;
+
+  // Get stance labels for display
+  const stanceLabels = Object.entries(userStances).map(([cat, stanceId]) => {
+    const stanceInfo = STANCE_OPTIONS[cat]?.stances.find(s => s.id === stanceId);
+    return {
+      category: STANCE_OPTIONS[cat]?.label || cat,
+      stance: stanceInfo?.label || stanceId,
+      icon: STANCE_OPTIONS[cat]?.icon || "🗣️",
+    };
+  });
 
   // Clean up polling on unmount
   useEffect(() => {
@@ -42,16 +54,15 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
     };
   }, []);
 
-  const startSearching = useCallback(async (category: string) => {
+  const startSearching = useCallback(async () => {
     setError(null);
-    setSelectedCategory(category);
     setSearchTime(0);
 
     try {
       const res = await fetch("/api/matchmaking/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category }),
+        body: JSON.stringify({ category: "anything" }),
       });
 
       const data = await res.json();
@@ -62,7 +73,6 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
       }
 
       if (data.status === "matched") {
-        // Instant match!
         setState("matched");
         setMatchData(data);
         setTimeout(() => router.push(`/debate/${data.debateId}`), 3000);
@@ -72,12 +82,10 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
       // Queued — start polling
       setState("queued");
 
-      // Start search timer
       timerRef.current = setInterval(() => {
         setSearchTime((t) => t + 1);
       }, 1000);
 
-      // Poll for match every 2 seconds
       pollRef.current = setInterval(async () => {
         try {
           const statusRes = await fetch("/api/matchmaking/status");
@@ -90,10 +98,9 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
             setMatchData(statusData);
             setTimeout(() => router.push(`/debate/${statusData.debateId}`), 3000);
           } else if (statusData.status === "idle") {
-            // Queue expired
             if (pollRef.current) clearInterval(pollRef.current);
             if (timerRef.current) clearInterval(timerRef.current);
-            setState("selecting");
+            setState("idle");
             setError("Queue timed out. Try again!");
           }
         } catch {
@@ -115,8 +122,7 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
       // Best effort
     }
 
-    setState("selecting");
-    setSelectedCategory(null);
+    setState("idle");
     setSearchTime(0);
   }, []);
 
@@ -131,10 +137,11 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
     return (
       <div className="max-w-2xl mx-auto px-4">
         <div className="text-center space-y-8">
-          {/* Match found animation */}
           <div className="relative">
             <div className="w-24 h-24 mx-auto rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center animate-pulse">
-              <span className="text-4xl">⚔️</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
             </div>
           </div>
 
@@ -143,10 +150,8 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
             <p className="text-gray-400">Get ready to debate</p>
           </div>
 
-          {/* Match details */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <div className="flex items-center justify-between">
-              {/* You */}
               <div className="text-center">
                 <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center mx-auto mb-2">
                   <span className="text-lg font-bold text-emerald-400">
@@ -155,17 +160,8 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
                 </div>
                 <p className="text-white font-medium">{username}</p>
                 <p className="text-xs text-gray-500">{elo} ELO</p>
-                {selectedCategory && selectedCategory !== "anything" && userStances[selectedCategory] && (
-                  <span className="mt-1 inline-block text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    {userStances[selectedCategory]}
-                  </span>
-                )}
               </div>
-
-              {/* VS */}
               <div className="text-2xl font-black text-gray-600">VS</div>
-
-              {/* Opponent */}
               <div className="text-center">
                 <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center mx-auto mb-2">
                   <span className="text-lg font-bold text-red-400">
@@ -179,8 +175,6 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
                 </span>
               </div>
             </div>
-
-            {/* Topic */}
             <div className="mt-6 pt-4 border-t border-gray-800">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Debate Topic</p>
               <p className="text-white font-medium">{matchData.topic}</p>
@@ -198,39 +192,30 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
     return (
       <div className="max-w-2xl mx-auto px-4">
         <div className="text-center space-y-8">
-          {/* Searching animation */}
           <div className="relative">
             <div className="w-24 h-24 mx-auto rounded-full border-4 border-gray-800 border-t-emerald-500 animate-spin" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl">🔍</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
             </div>
           </div>
 
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Finding Opponent...</h1>
             <p className="text-gray-400">
-              Searching in{" "}
-              <span className="text-emerald-400 font-medium">
-                {CATEGORY_TAGS.find((c) => c.id === selectedCategory)?.label || selectedCategory}
-              </span>
+              Matching based on your {stanceCount} stance{stanceCount !== 1 ? "s" : ""}
             </p>
-            {selectedCategory && selectedCategory !== "anything" && userStances[selectedCategory] && (
-              <p className="text-gray-500 text-sm mt-1">
-                Your stance: <span className="text-white">{userStances[selectedCategory]}</span>
-              </p>
-            )}
           </div>
 
-          {/* Timer */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <p className="text-4xl font-mono text-white mb-2">{formatTime(searchTime)}</p>
             <p className="text-gray-500 text-sm">Matching you with someone who disagrees...</p>
           </div>
 
-          {/* Tips while waiting */}
           <div className="bg-gray-900/50 border border-gray-800/50 rounded-lg p-4">
             <p className="text-gray-400 text-sm">
-              💡 <span className="text-gray-300">Tip:</span> The best debates happen when you listen first, then respond.
+              The best debates happen when you listen first, then respond.
               Try to understand your opponent&apos;s position before countering.
             </p>
           </div>
@@ -246,81 +231,66 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
     );
   }
 
-  // Category selection screen (idle / selecting)
+  // Idle — ready to search (no category selection)
   return (
-    <div className="max-w-4xl mx-auto px-4">
+    <div className="max-w-md mx-auto px-4">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-white mb-3">Find a Debate</h1>
         <p className="text-gray-400 text-lg">
-          Pick a category and get matched with someone who thinks differently
+          Get matched with someone who thinks differently
         </p>
       </div>
 
       {error && (
-        <div className="max-w-md mx-auto mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+        <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
           {error}
         </div>
       )}
 
-      {/* Category grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {CATEGORY_TAGS.map((cat) => {
-          const hasStance = cat.id === "anything" || !!userStances[cat.id];
-          const stanceLabel = cat.id !== "anything" && userStances[cat.id]
-            ? STANCE_OPTIONS[cat.id]?.stances.find((s) => s.id === userStances[cat.id])?.label
-            : null;
-
-          return (
-            <button
-              key={cat.id}
-              onClick={() => hasStance ? startSearching(cat.id) : setError(`Pick a stance for ${cat.label} first → /stances`)}
-              className={`relative group p-6 rounded-xl border transition-all text-left ${
-                hasStance
-                  ? "bg-gray-900 border-gray-800 hover:border-emerald-500/50 hover:bg-gray-900/80 cursor-pointer"
-                  : "bg-gray-900/50 border-gray-800/50 opacity-60 cursor-not-allowed"
-              }`}
-            >
-              <span className="text-3xl block mb-3">{cat.icon}</span>
-              <h3 className="text-white font-semibold mb-1">{cat.label}</h3>
-              {stanceLabel ? (
-                <p className="text-xs text-emerald-400">{stanceLabel}</p>
-              ) : cat.id === "anything" ? (
-                <p className="text-xs text-gray-500">Match anyone</p>
-              ) : (
-                <p className="text-xs text-gray-600">No stance set</p>
-              )}
-
-              {/* Hover arrow */}
-              {hasStance && (
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-emerald-500">
-                  →
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Info section */}
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6">
-          <h3 className="text-white font-semibold mb-3">How Matchmaking Works</h3>
-          <div className="space-y-2 text-sm text-gray-400">
-            <p>
-              <span className="text-emerald-400 font-medium">1.</span> Pick a category you want to debate
-            </p>
-            <p>
-              <span className="text-emerald-400 font-medium">2.</span> We match you with someone who has an opposing stance
-            </p>
-            <p>
-              <span className="text-emerald-400 font-medium">3.</span> Both debaters get a topic and enter the room
-            </p>
-            <p>
-              <span className="text-emerald-400 font-medium">4.</span> Debate live — viewers vote on who&apos;s winning
-            </p>
+      {/* Stances summary */}
+      {stanceCount > 0 ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Your Stances</h3>
+            <Link href="/stances" className="text-[11px] text-emerald-400 font-medium hover:underline">
+              Edit
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {stanceLabels.map((s, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5"
+              >
+                <span className="text-sm">{s.icon}</span>
+                <span className="text-xs font-semibold text-white">{s.stance}</span>
+                <span className="text-[10px] text-gray-500">{s.category}</span>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 mb-6 text-center">
+          <p className="text-sm text-amber-400 font-medium mb-2">No stances set yet</p>
+          <p className="text-xs text-amber-400/70 mb-3">
+            Pick your positions so we can match you with someone who disagrees.
+          </p>
+          <Link
+            href="/stances"
+            className="inline-block px-4 py-2 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition"
+          >
+            Set Your Stances
+          </Link>
+        </div>
+      )}
+
+      <button
+        onClick={startSearching}
+        disabled={stanceCount === 0}
+        className="w-full py-4 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
+      >
+        {stanceCount === 0 ? "Set stances to start debating" : "Start Searching"}
+      </button>
     </div>
   );
 }

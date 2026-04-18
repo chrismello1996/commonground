@@ -22,7 +22,6 @@ export default function DebateLobbyPage() {
 
   const [status, setStatus] = useState<QueueStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>("anything");
   const [userStances, setUserStances] = useState<Record<string, string>>({});
   const [searchTime, setSearchTime] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
@@ -107,8 +106,7 @@ export default function DebateLobbyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          category: selectedCategory,
-          stance: selectedCategory !== "anything" ? userStances[selectedCategory] : undefined,
+          category: "anything",
         }),
       });
 
@@ -130,7 +128,7 @@ export default function DebateLobbyPage() {
       setError("Network error. Please try again.");
       setStatus("error");
     }
-  }, [userId, selectedCategory, userStances]);
+  }, [userId]);
 
   const leaveQueue = useCallback(async () => {
     if (!userId) return;
@@ -153,11 +151,18 @@ export default function DebateLobbyPage() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const stanceLabel = selectedCategory !== "anything" && userStances[selectedCategory]
-    ? STANCE_OPTIONS[selectedCategory]?.stances.find(
-        (s) => s.id === userStances[selectedCategory]
-      )?.label
-    : null;
+  const stanceCount = Object.keys(userStances).length;
+
+  // Get the stance labels for display
+  const stanceLabels = Object.entries(userStances).map(([cat, stanceId]) => {
+    const catInfo = CATEGORY_TAGS.find(c => c.id === cat);
+    const stanceInfo = STANCE_OPTIONS[cat]?.stances.find(s => s.id === stanceId);
+    return {
+      category: catInfo?.label || cat,
+      stance: stanceInfo?.label || stanceId,
+      icon: catInfo?.icon || "🗣️",
+    };
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -183,15 +188,15 @@ export default function DebateLobbyPage() {
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-        {/* IDLE STATE — Category selection */}
+        {/* IDLE STATE — Ready to search */}
         {(status === "idle" || status === "error") && (
-          <div className="w-full max-w-lg">
+          <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-extrabold text-gray-900 mb-2">
                 Find a Debate
               </h1>
               <p className="text-sm text-gray-500">
-                Choose a category and get matched with someone who disagrees.
+                Get matched with someone who disagrees with your stances.
               </p>
             </div>
 
@@ -201,72 +206,53 @@ export default function DebateLobbyPage() {
               </div>
             )}
 
-            {/* Category Grid */}
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              {CATEGORY_TAGS.map((cat) => {
-                const hasStance = cat.id !== "anything" && userStances[cat.id];
-                const isSelected = selectedCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`
-                      relative rounded-xl border-2 p-4 text-left transition-all
-                      ${isSelected
-                        ? "border-emerald-500 bg-emerald-500/5 shadow-sm"
-                        : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{cat.icon}</span>
-                      <span className="text-sm font-bold text-gray-900">{cat.label}</span>
+            {/* Your Stances Summary */}
+            {stanceCount > 0 ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Your Stances</h3>
+                  <Link href="/stances" className="text-[11px] text-emerald-600 font-medium hover:underline">
+                    Edit
+                  </Link>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {stanceLabels.map((s, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-1.5"
+                    >
+                      <span className="text-sm">{s.icon}</span>
+                      <span className="text-xs font-semibold text-gray-900">{s.stance}</span>
+                      <span className="text-[10px] text-gray-400">{s.category}</span>
                     </div>
-                    {cat.id !== "anything" && (
-                      <p className="text-[11px] text-gray-400 ml-7">
-                        {hasStance ? (
-                          <span className="text-emerald-600 font-medium">
-                            Your stance: {STANCE_OPTIONS[cat.id]?.stances.find(s => s.id === userStances[cat.id])?.label}
-                          </span>
-                        ) : (
-                          <span className="text-amber-500">No stance set</span>
-                        )}
-                      </p>
-                    )}
-                    {cat.id === "anything" && (
-                      <p className="text-[11px] text-gray-400 ml-7">Random topic, any opponent</p>
-                    )}
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 text-center">
+                <p className="text-sm text-amber-700 font-medium mb-2">No stances set yet</p>
+                <p className="text-xs text-amber-600 mb-3">
+                  Pick your positions so we can match you with someone who disagrees.
+                </p>
+                <Link
+                  href="/stances"
+                  className="inline-block px-4 py-2 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition"
+                >
+                  Set Your Stances
+                </Link>
+              </div>
+            )}
 
-            {/* Join Button */}
+            {/* Start Searching Button */}
             <button
               onClick={joinQueue}
-              disabled={selectedCategory !== "anything" && !userStances[selectedCategory]}
+              disabled={stanceCount === 0}
               className="w-full py-4 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
             >
-              {selectedCategory !== "anything" && !userStances[selectedCategory]
-                ? "Set a stance first to debate this category"
-                : `Start Searching — ${CATEGORY_TAGS.find((c) => c.id === selectedCategory)?.label}`}
+              {stanceCount === 0
+                ? "Set stances to start debating"
+                : "Start Searching"}
             </button>
-
-            {selectedCategory !== "anything" && !userStances[selectedCategory] && (
-              <Link
-                href="/stances"
-                className="block text-center text-xs text-emerald-600 font-medium mt-3 hover:underline"
-              >
-                Go set your stances →
-              </Link>
-            )}
           </div>
         )}
 
@@ -281,7 +267,9 @@ export default function DebateLobbyPage() {
                 style={{ animationDuration: "1s" }}
               />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-3xl">🗣️</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
               </div>
             </div>
 
@@ -291,11 +279,9 @@ export default function DebateLobbyPage() {
             <p className="text-sm text-gray-500 mb-1 h-5 transition-all">
               {SEARCH_MESSAGES[messageIndex]}
             </p>
-            {stanceLabel && (
-              <p className="text-xs text-emerald-600 font-medium mb-4">
-                Category: {CATEGORY_TAGS.find(c => c.id === selectedCategory)?.label} · Your stance: {stanceLabel}
-              </p>
-            )}
+            <p className="text-xs text-emerald-600 font-medium mb-4">
+              Matching based on your {stanceCount} stance{stanceCount !== 1 ? "s" : ""}
+            </p>
 
             {/* Timer */}
             <div className="bg-gray-50 border border-gray-200 rounded-full px-5 py-2 mb-8">
@@ -331,7 +317,9 @@ export default function DebateLobbyPage() {
         {status === "matched" && (
           <div className="flex flex-col items-center text-center">
             <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
-              <span className="text-4xl">⚔️</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
             </div>
             <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
               Opponent Found!
