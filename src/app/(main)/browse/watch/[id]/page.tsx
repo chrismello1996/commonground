@@ -147,10 +147,10 @@ export default function WatchPage() {
             <button
               onClick={() => prevStream && router.push(`/browse/watch/${prevStream.id}`)}
               disabled={!prevStream}
-              className="w-11 rounded-lg border-2 border-gray-200 bg-white flex items-center justify-center hover:border-gray-300 hover:bg-gray-100 active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
+              className="w-14 rounded-lg border-2 border-gray-200 bg-white flex items-center justify-center hover:border-gray-300 hover:bg-gray-100 active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
               title="Previous debate"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
             </button>
@@ -189,10 +189,10 @@ export default function WatchPage() {
             <button
               onClick={() => nextStream && router.push(`/browse/watch/${nextStream.id}`)}
               disabled={!nextStream}
-              className="w-11 rounded-lg border-2 border-emerald-500 bg-emerald-500/10 flex items-center justify-center hover:bg-emerald-500/20 active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-white"
+              className="w-14 rounded-lg border-2 border-emerald-500 bg-emerald-500/10 flex items-center justify-center hover:bg-emerald-500/20 active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-white"
               title="Next debate"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </button>
