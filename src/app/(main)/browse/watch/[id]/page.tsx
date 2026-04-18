@@ -87,29 +87,6 @@ export default function WatchPage() {
               {formatViewers(stream.viewers)}
             </span>
             <span className="text-[11px] text-gray-500 font-mono">{formatTime(elapsed)}</span>
-            {/* Prev / Next buttons */}
-            <div className="flex items-center gap-1 ml-1 border-l border-gray-200 pl-2">
-              <button
-                onClick={() => prevStream && router.push(`/browse/watch/${prevStream.id}`)}
-                disabled={!prevStream}
-                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Previous debate"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-              </button>
-              <button
-                onClick={() => nextStream && router.push(`/browse/watch/${nextStream.id}`)}
-                disabled={!nextStream}
-                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Next debate"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-                  <polyline points="9 18 15 12 9 6"/>
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -164,33 +141,60 @@ export default function WatchPage() {
               {Math.round((pctB / totalAdj) * 100)}%
             </div>
           </div>
-          {/* Vote buttons */}
-          <div className="flex gap-3">
+          {/* Vote buttons + Nav */}
+          <div className="flex gap-2 items-stretch">
+            {/* Prev button */}
             <button
-              onClick={() => setVotedFor("A")}
-              disabled={votedFor !== null}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition ${
-                votedFor === "A"
-                  ? "bg-emerald-500 text-white"
-                  : votedFor === "B"
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/30"
-              }`}
+              onClick={() => prevStream && router.push(`/browse/watch/${prevStream.id}`)}
+              disabled={!prevStream}
+              className="w-11 rounded-lg border-2 border-gray-200 bg-white flex items-center justify-center hover:border-gray-300 hover:bg-gray-100 active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
+              title="Previous debate"
             >
-              Vote {stream.debaterA.name}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
             </button>
+
+            {/* Vote buttons */}
+            <div className="flex-1 flex gap-2">
+              <button
+                onClick={() => setVotedFor("A")}
+                disabled={votedFor !== null}
+                className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition ${
+                  votedFor === "A"
+                    ? "bg-emerald-500 text-white"
+                    : votedFor === "B"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/30"
+                }`}
+              >
+                Vote {stream.debaterA.name}
+              </button>
+              <button
+                onClick={() => setVotedFor("B")}
+                disabled={votedFor !== null}
+                className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition ${
+                  votedFor === "B"
+                    ? "bg-amber-800 text-white"
+                    : votedFor === "A"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-amber-800/10 text-amber-800 hover:bg-amber-800/20 border border-amber-800/30"
+                }`}
+              >
+                Vote {stream.debaterB.name}
+              </button>
+            </div>
+
+            {/* Next button */}
             <button
-              onClick={() => setVotedFor("B")}
-              disabled={votedFor !== null}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition ${
-                votedFor === "B"
-                  ? "bg-amber-800 text-white"
-                  : votedFor === "A"
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-amber-800/10 text-amber-800 hover:bg-amber-800/20 border border-amber-800/30"
-              }`}
+              onClick={() => nextStream && router.push(`/browse/watch/${nextStream.id}`)}
+              disabled={!nextStream}
+              className="w-11 rounded-lg border-2 border-emerald-500 bg-emerald-500/10 flex items-center justify-center hover:bg-emerald-500/20 active:scale-95 transition-all disabled:opacity-25 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-white"
+              title="Next debate"
             >
-              Vote {stream.debaterB.name}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
             </button>
           </div>
         </div>
