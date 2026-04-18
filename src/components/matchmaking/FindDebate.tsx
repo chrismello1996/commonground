@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { STANCE_OPTIONS } from "@/utils/constants";
 import Link from "next/link";
 
 interface FindDebateProps {
@@ -12,7 +11,7 @@ interface FindDebateProps {
   userStances: Record<string, string>;
 }
 
-type MatchState = "idle" | "queued" | "matched";
+type MatchState = "joining" | "queued" | "matched" | "error";
 
 interface MatchData {
   debateId: string;
@@ -25,26 +24,15 @@ interface MatchData {
   };
 }
 
-export default function FindDebate({ username, elo, userStances }: FindDebateProps) {
+export default function FindDebate({ username, elo }: FindDebateProps) {
   const router = useRouter();
-  const [state, setState] = useState<MatchState>("idle");
+  const [state, setState] = useState<MatchState>("joining");
   const [matchData, setMatchData] = useState<MatchData | null>(null);
   const [searchTime, setSearchTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const stanceCount = Object.keys(userStances).length;
-
-  // Get stance labels for display
-  const stanceLabels = Object.entries(userStances).map(([cat, stanceId]) => {
-    const stanceInfo = STANCE_OPTIONS[cat]?.stances.find(s => s.id === stanceId);
-    return {
-      category: STANCE_OPTIONS[cat]?.label || cat,
-      stance: stanceInfo?.label || stanceId,
-      icon: STANCE_OPTIONS[cat]?.icon || "🗣️",
-    };
-  });
+  const hasJoined = useRef(false);
 
   // Clean up polling on unmount
   useEffect(() => {
@@ -54,9 +42,17 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
     };
   }, []);
 
+  // Auto-join queue on mount
+  useEffect(() => {
+    if (hasJoined.current) return;
+    hasJoined.current = true;
+    startSearching();
+  }, []);
+
   const startSearching = useCallback(async () => {
     setError(null);
     setSearchTime(0);
+    setState("joining");
 
     try {
       const res = await fetch("/api/matchmaking/join", {
@@ -69,6 +65,7 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
 
       if (!res.ok) {
         setError(data.error || "Failed to join queue");
+        setState("error");
         return;
       }
 
@@ -79,7 +76,6 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
         return;
       }
 
-      // Queued — start polling
       setState("queued");
 
       timerRef.current = setInterval(() => {
@@ -100,15 +96,16 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
           } else if (statusData.status === "idle") {
             if (pollRef.current) clearInterval(pollRef.current);
             if (timerRef.current) clearInterval(timerRef.current);
-            setState("idle");
+            setState("error");
             setError("Queue timed out. Try again!");
           }
         } catch {
-          // Silently retry on network errors
+          // Silently retry
         }
       }, 2000);
     } catch {
       setError("Network error. Please try again.");
+      setState("error");
     }
   }, [router]);
 
@@ -122,9 +119,8 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
       // Best effort
     }
 
-    setState("idle");
-    setSearchTime(0);
-  }, []);
+    router.push("/");
+  }, [router]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -170,9 +166,6 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
                 </div>
                 <p className="text-white font-medium">{matchData.opponent.username}</p>
                 <p className="text-xs text-gray-500">{matchData.opponent.elo} ELO</p>
-                <span className="mt-1 inline-block text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-                  {matchData.opponent.stance}
-                </span>
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-gray-800">
@@ -187,110 +180,65 @@ export default function FindDebate({ username, elo, userStances }: FindDebatePro
     );
   }
 
-  // Searching / queued screen
-  if (state === "queued") {
+  // Error screen
+  if (state === "error") {
     return (
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="text-center space-y-8">
-          <div className="relative">
-            <div className="w-24 h-24 mx-auto rounded-full border-4 border-gray-800 border-t-emerald-500 animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-              </svg>
-            </div>
-          </div>
-
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Finding Opponent...</h1>
-            <p className="text-gray-400">
-              Matching based on your {stanceCount} stance{stanceCount !== 1 ? "s" : ""}
-            </p>
-          </div>
-
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <p className="text-4xl font-mono text-white mb-2">{formatTime(searchTime)}</p>
-            <p className="text-gray-500 text-sm">Matching you with someone who disagrees...</p>
-          </div>
-
-          <div className="bg-gray-900/50 border border-gray-800/50 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">
-              The best debates happen when you listen first, then respond.
-              Try to understand your opponent&apos;s position before countering.
-            </p>
-          </div>
-
+      <div className="max-w-md mx-auto px-4 text-center">
+        <div className="w-20 h-20 mx-auto rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
+            <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+        <p className="text-sm text-red-400 mb-6">{error}</p>
+        <div className="flex gap-3 justify-center">
           <button
-            onClick={cancelSearch}
-            className="px-6 py-3 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all font-medium"
+            onClick={startSearching}
+            className="px-6 py-2.5 rounded-lg bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition"
           >
-            Cancel Search
+            Try Again
           </button>
+          <Link
+            href="/"
+            className="px-6 py-2.5 rounded-lg bg-gray-800 text-gray-300 text-sm font-medium hover:bg-gray-700 transition"
+          >
+            Go Home
+          </Link>
         </div>
       </div>
     );
   }
 
-  // Idle — ready to search (no category selection)
+  // Searching / queued screen (default view on mount)
   return (
-    <div className="max-w-md mx-auto px-4">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-white mb-3">Find a Debate</h1>
-        <p className="text-gray-400 text-lg">
-          Get matched with someone who thinks differently
-        </p>
+    <div className="max-w-2xl mx-auto px-4">
+      <div className="text-center space-y-8">
+        <div className="relative">
+          <div className="w-24 h-24 mx-auto rounded-full border-4 border-gray-800 border-t-emerald-500 animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Finding Opponent...</h1>
+          <p className="text-gray-400">Matching you with someone who disagrees</p>
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <p className="text-4xl font-mono text-white mb-2">{formatTime(searchTime)}</p>
+          <p className="text-gray-500 text-sm">Hang tight — scanning for opponents…</p>
+        </div>
+
+        <button
+          onClick={cancelSearch}
+          className="px-6 py-3 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all font-medium"
+        >
+          Cancel
+        </button>
       </div>
-
-      {error && (
-        <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-          {error}
-        </div>
-      )}
-
-      {/* Stances summary */}
-      {stanceCount > 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Your Stances</h3>
-            <Link href="/stances" className="text-[11px] text-emerald-400 font-medium hover:underline">
-              Edit
-            </Link>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {stanceLabels.map((s, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-1.5 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5"
-              >
-                <span className="text-sm">{s.icon}</span>
-                <span className="text-xs font-semibold text-white">{s.stance}</span>
-                <span className="text-[10px] text-gray-500">{s.category}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 mb-6 text-center">
-          <p className="text-sm text-amber-400 font-medium mb-2">No stances set yet</p>
-          <p className="text-xs text-amber-400/70 mb-3">
-            Pick your positions so we can match you with someone who disagrees.
-          </p>
-          <Link
-            href="/stances"
-            className="inline-block px-4 py-2 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition"
-          >
-            Set Your Stances
-          </Link>
-        </div>
-      )}
-
-      <button
-        onClick={startSearching}
-        disabled={stanceCount === 0}
-        className="w-full py-4 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20"
-      >
-        {stanceCount === 0 ? "Set stances to start debating" : "Start Searching"}
-      </button>
     </div>
   );
 }
