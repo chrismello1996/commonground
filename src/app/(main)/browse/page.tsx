@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   FAKE_USERS,
   STREAM_TITLES,
-  CATEGORY_TAGS,
   formatViewers,
   formatTime,
 } from "@/utils/constants";
@@ -21,11 +20,9 @@ const LIVE_STREAMS = [
 ];
 
 export default function BrowsePage() {
-  const [filter, setFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"viewers" | "newest">("viewers");
 
   const filtered = LIVE_STREAMS
-    .filter((s) => filter === "all" || s.category === filter)
     .sort((a, b) => sortBy === "viewers" ? b.viewers - a.viewers : b.id - a.id);
 
   const topDebaters = [...FAKE_USERS].sort((a, b) => b.elo - a.elo).slice(0, 5);
@@ -52,33 +49,6 @@ export default function BrowsePage() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Category Filters */}
-        <div className="flex gap-1.5 flex-wrap mb-4">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1 rounded-full border text-[11px] font-semibold transition ${
-              filter === "all"
-                ? "bg-emerald-500/10 border-emerald-500 text-emerald-600"
-                : "bg-gray-50 border-gray-200 text-gray-500 hover:border-emerald-500"
-            }`}
-          >
-            All
-          </button>
-          {CATEGORY_TAGS.filter(c => c.id !== "anything").map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setFilter(cat.id)}
-              className={`px-3 py-1 rounded-full border text-[11px] font-semibold transition whitespace-nowrap ${
-                filter === cat.id
-                  ? "bg-emerald-500/10 border-emerald-500 text-emerald-600"
-                  : "bg-gray-50 border-gray-200 text-gray-500 hover:border-emerald-500"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
         </div>
 
         {/* Stream Grid */}
