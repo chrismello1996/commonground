@@ -48,6 +48,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Anti-cheat: debaters cannot vote in their own debate
+    const { data: debate } = await supabase
+      .from("debates")
+      .select("user_a, user_b")
+      .eq("id", debate_id)
+      .single();
+
+    if (debate && (debate.user_a === user.id || debate.user_b === user.id)) {
+      return NextResponse.json(
+        { error: "Debaters cannot vote in their own debate" },
+        { status: 403 }
+      );
+    }
+
+    // Anti-cheat: cannot vote for yourself
+    if (voted_for === user.id) {
+      return NextResponse.json(
+        { error: "You cannot vote for yourself" },
+        { status: 403 }
+      );
+    }
+
     // Insert vote (unique constraint prevents double-voting)
     const { data, error } = await supabase
       .from("debate_votes")
