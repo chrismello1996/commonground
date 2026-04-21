@@ -95,7 +95,8 @@ export default function DebateRoom({
 
   // Debate features
   const [debateViewers, setDebateViewers] = useState(Math.floor(Math.random() * 50) + 10);
-  const [debateTopic] = useState<{ topic: string }>({ topic });
+  const [debateTopic, setDebateTopic] = useState(topic);
+  const [proposedTopic, setProposedTopic] = useState("");
   const [myVote, setMyVote] = useState<"A" | "B" | null>(null);
   const [debateVotesA, setDebateVotesA] = useState(50);
   const [debateVotesB, setDebateVotesB] = useState(50);
@@ -307,11 +308,11 @@ export default function DebateRoom({
               )}
               <div className="live-pill"><span className="live-pill-dot" />LIVE</div>
               <div className="viewer-count-badge">{debateViewers}</div>
-              <a href={`/profile/${me.id}`} className="video-label video-label-link">
+              <div className="video-label">
                 <span className="video-label-dot" style={{ background: "var(--green)" }} />
                 {me.username}
                 <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
-              </a>
+              </div>
               {/* Tag / Stance badge */}
               <div className="stance-tag" style={{ background: myStanceColor }}>
                 {myStanceLabel}
@@ -334,11 +335,11 @@ export default function DebateRoom({
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{opponent.username}</span>
                 </div>
               )}
-              <a href={`/profile/${opponent.id}`} className="video-label video-label-link">
+              <div className="video-label">
                 <span className="video-label-dot" style={{ background: "var(--red)" }} />
                 {opponent.username}
                 <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
-              </a>
+              </div>
               {/* Tag / Stance badge */}
               <div className="stance-tag" style={{ background: opponentStanceColor }}>
                 {opponentStanceLabel}
@@ -400,13 +401,37 @@ export default function DebateRoom({
             <div className="vote-pct right">{normB}%</div>
           </div>
 
-          {/* Topic banner — static, no shuffle */}
+          {/* Topic banner with propose/set */}
           <div className="topic-banner">
             <span className="topic-label">Topic</span>
-            <span className="topic-text">{debateTopic.topic}</span>
+            <span className="topic-text">{debateTopic}</span>
             {categoryConfig && (
               <span className="category-pill">{categoryConfig.label}</span>
             )}
+          </div>
+          <div className="topic-propose-row">
+            <input
+              className="topic-propose-input"
+              placeholder="Propose a topic..."
+              value={proposedTopic}
+              onChange={(e) => setProposedTopic(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && proposedTopic.trim()) {
+                  setDebateTopic(proposedTopic.trim());
+                  setProposedTopic("");
+                }
+              }}
+            />
+            <button
+              className="topic-set-btn"
+              onClick={() => {
+                if (!proposedTopic.trim()) return;
+                setDebateTopic(proposedTopic.trim());
+                setProposedTopic("");
+              }}
+            >
+              Set Topic
+            </button>
           </div>
 
           {/* Controls bar — sleek, no emoji */}
