@@ -8,49 +8,6 @@ import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
 import "@/styles/debate-room.css";
 
-// ===== DEBATE TOPICS =====
-const DEBATE_TOPICS: Record<string, { general: string[]; stancePairs?: Record<string, string[]> }> = {
-  politics: {
-    general: ["Should voting be mandatory?", "Is the two-party system broken?", "Should there be term limits for Congress?"],
-    stancePairs: {
-      "democrat|republican": ["Is big government the solution or the problem?", "Should taxes on the wealthy be increased?", "Gun control: safety measure or rights violation?", "Is universal healthcare a right?", "Immigration: open borders or secure borders?"],
-      "libertarian|democrat": ["Should the government regulate social media?", "Is the welfare state helping or hurting?"],
-    },
-  },
-  economics: {
-    general: ["Is inflation always a monetary phenomenon?", "Should we return to the gold standard?", "Is UBI inevitable?"],
-    stancePairs: {
-      "capitalist|socialist": ["Should billionaires exist?", "Is profit inherently exploitative?", "Does trickle-down economics work?"],
-      "keynesian|austrian": ["Should governments run deficits during recessions?", "Is central banking a net positive?"],
-    },
-  },
-  philosophy: {
-    general: ["Is free will an illusion?", "Does objective morality exist?", "Is consciousness just an emergent property?"],
-  },
-  sports: {
-    general: ["Is the GOAT debate even possible?", "Should college athletes be paid?", "Is esports a real sport?"],
-  },
-  conspiracy: {
-    general: ["Is the government hiding alien contact?", "Are we living in a simulation?", "Is the media trustworthy?"],
-  },
-  pill: {
-    general: ["Which pill ideology is the most accurate worldview?", "Are pill ideologies helpful or reductive?"],
-    stancePairs: {
-      "redPill|bluePill": ["Is ignorance bliss?", "Is 'waking up' worth the cost?"],
-    },
-  },
-  religion: {
-    general: ["Can morality exist without religion?", "Should religion influence law?", "Can science and faith coexist?"],
-    stancePairs: {
-      "christianity|atheism": ["Does God exist?", "Is faith a virtue or a weakness?"],
-      "islam|atheism": ["Is Islam compatible with Western values?", "Does secularism lead to moral decay?"],
-    },
-  },
-  anything: {
-    general: ["What's the most overrated thing in society?", "Is humanity getting better or worse?", "Should we colonize Mars?", "Is the American Dream dead?", "Is social media a net negative?"],
-  },
-};
-
 // ===== FACT CHECK DATA =====
 const FACT_CHECK_CLAIMS: Record<string, { claim: string; verdict: string; source: string }[]> = {
   politics: [
@@ -110,20 +67,6 @@ interface FloatingReaction {
 
 const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
-const pickDebateTopic = (myStance: string, oppStance: string, category: string) => {
-  const catTopics = DEBATE_TOPICS[category] || DEBATE_TOPICS.anything;
-  if (catTopics.stancePairs) {
-    for (const [pairKey, topics] of Object.entries(catTopics.stancePairs)) {
-      const [sideA, sideB] = pairKey.split("|");
-      if ((myStance === sideA && oppStance === sideB) || (myStance === sideB && oppStance === sideA)) {
-        return { topic: topics[Math.floor(Math.random() * topics.length)], source: "stance" };
-      }
-    }
-  }
-  const general = catTopics.general || DEBATE_TOPICS.anything.general;
-  return { topic: general[Math.floor(Math.random() * general.length)], source: "general" };
-};
-
 const getEloRank = (elo: number) => elo >= 1800 ? "gold" : elo >= 1500 ? "silver" : "bronze";
 
 export default function DebateRoom({
@@ -152,8 +95,7 @@ export default function DebateRoom({
 
   // Debate features
   const [debateViewers, setDebateViewers] = useState(Math.floor(Math.random() * 50) + 10);
-  const [debateTopic, setDebateTopic] = useState<{ topic: string; source: string }>({ topic, source: "general" });
-  const [customTopicInput, setCustomTopicInput] = useState("");
+  const [debateTopic] = useState<{ topic: string }>({ topic });
   const [myVote, setMyVote] = useState<"A" | "B" | null>(null);
   const [debateVotesA, setDebateVotesA] = useState(50);
   const [debateVotesB, setDebateVotesB] = useState(50);
@@ -306,11 +248,6 @@ export default function DebateRoom({
     router.push("/");
   }, [router]);
 
-  const shuffleTopic = () => {
-    const newTopic = pickDebateTopic(me.stance, opponent.stance, category);
-    setDebateTopic(newTopic);
-  };
-
   const submitFactCheck = (claim: string) => {
     const catData = FACT_CHECK_CLAIMS[category] || FACT_CHECK_CLAIMS.anything;
     const match = catData?.find((c) => claim.toLowerCase().includes(c.claim.toLowerCase().slice(0, 20)));
@@ -320,10 +257,6 @@ export default function DebateRoom({
     setFactChecks((prev) => [...prev.slice(-1), fc]);
     setFactCheckHistory((prev) => [...prev, fc]);
     setTimeout(() => setFactChecks((prev) => prev.filter((f) => f.id !== fc.id)), 8000);
-  };
-
-  const clipMoment = () => {
-    addReaction("✂️");
   };
 
   const addReaction = (emoji: string) => {
@@ -363,24 +296,27 @@ export default function DebateRoom({
           <div className="video-grid">
             {/* MY VIDEO PANEL */}
             <div className="video-panel">
-              {localVideoTrack && !(!isCamOn) ? (
+              {localVideoTrack && isCamOn ? (
                 <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
                 <div className="video-placeholder">
                   <div className="video-placeholder-avatar" style={{ background: myStanceColor }}>{me.username[0]?.toUpperCase()}</div>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{me.username}</span>
-                  {!isCamOn && <span style={{ fontSize: 9, color: "var(--muted)", marginTop: 4 }}>📷 Camera off</span>}
+                  {!isCamOn && <span style={{ fontSize: 9, color: "var(--muted)", marginTop: 4 }}>Camera off</span>}
                 </div>
               )}
               <div className="live-pill"><span className="live-pill-dot" />LIVE</div>
-              <div className="viewer-count-badge">👁️ {debateViewers}</div>
-              <div className="video-label">
+              <div className="viewer-count-badge">{debateViewers}</div>
+              <a href={`/profile/${me.id}`} className="video-label video-label-link">
                 <span className="video-label-dot" style={{ background: "var(--green)" }} />
                 {me.username}
                 <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
+              </a>
+              {/* Tag / Stance badge */}
+              <div className="stance-tag" style={{ background: myStanceColor }}>
+                {myStanceLabel}
               </div>
               <div className="uptime-badge">{formatTime(debateTime)}</div>
-              <button className="clip-btn-overlay" onClick={clipMoment}>✂️ Clip</button>
               <div className="reaction-overlay">
                 {floatingReactions.map((r) => (
                   <div key={r.id} className="floating-reaction" style={{ left: `${r.x}%` }}>{r.emoji}</div>
@@ -398,13 +334,15 @@ export default function DebateRoom({
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{opponent.username}</span>
                 </div>
               )}
-              <div className="video-label">
+              <a href={`/profile/${opponent.id}`} className="video-label video-label-link">
                 <span className="video-label-dot" style={{ background: "var(--red)" }} />
                 {opponent.username}
                 <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
+              </a>
+              {/* Tag / Stance badge */}
+              <div className="stance-tag" style={{ background: opponentStanceColor }}>
+                {opponentStanceLabel}
               </div>
-              <div className="elo-overlay">🏆 ELO: {opponent.elo}</div>
-              <button className="clip-btn-overlay" onClick={clipMoment}>✂️ Clip</button>
 
               {/* Fact check overlay */}
               {factChecks.length > 0 && (
@@ -418,8 +356,7 @@ export default function DebateRoom({
                           <div className={`fc-label ${fc.verdict}`}>{verdict.label}</div>
                           <div className="fc-claim">&quot;{fc.claim}&quot;</div>
                           <div className="fc-meta">
-                            <span className="fc-source">📎 {fc.source}</span>
-                            <span className="fc-trigger search">🔍 Search</span>
+                            <span className="fc-source">{fc.source}</span>
                           </div>
                         </div>
                       </div>
@@ -433,10 +370,10 @@ export default function DebateRoom({
           {/* Fact check score bar */}
           {factCheckHistory.length > 0 && (
             <div className="fc-score">
-              <span style={{ fontSize: 10, color: "var(--txt2)", fontWeight: 600 }}>🔍 Fact Checks ({factCheckHistory.length})</span>
-              <span style={{ color: "#10b981", fontWeight: 700, fontSize: 10 }}>✅ {factCheckHistory.filter((f) => f.verdict === "true").length}</span>
-              <span style={{ color: "#ef4444", fontWeight: 700, fontSize: 10 }}>❌ {factCheckHistory.filter((f) => f.verdict === "false").length}</span>
-              <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 10 }}>⚠️ {factCheckHistory.filter((f) => f.verdict === "misleading").length}</span>
+              <span style={{ fontSize: 10, color: "var(--txt2)", fontWeight: 600 }}>Fact Checks ({factCheckHistory.length})</span>
+              <span style={{ color: "#10b981", fontWeight: 700, fontSize: 10 }}>{factCheckHistory.filter((f) => f.verdict === "true").length} True</span>
+              <span style={{ color: "#ef4444", fontWeight: 700, fontSize: 10 }}>{factCheckHistory.filter((f) => f.verdict === "false").length} False</span>
+              <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 10 }}>{factCheckHistory.filter((f) => f.verdict === "misleading").length} Misleading</span>
               <div style={{ marginLeft: "auto", display: "flex", gap: 4, alignItems: "center" }}>
                 <input
                   className="topic-propose-input"
@@ -446,18 +383,8 @@ export default function DebateRoom({
                   onChange={(e) => setFactCheckInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && factCheckInput.trim()) { submitFactCheck(factCheckInput); setFactCheckInput(""); } }}
                 />
-                <button className="factcheck-btn" onClick={() => { if (factCheckInput.trim()) { submitFactCheck(factCheckInput); setFactCheckInput(""); } }}>🔍 Check</button>
+                <button className="factcheck-btn" onClick={() => { if (factCheckInput.trim()) { submitFactCheck(factCheckInput); setFactCheckInput(""); } }}>Check</button>
               </div>
-            </div>
-          )}
-
-          {/* Stance clash banner */}
-          {myStanceLabel && opponentStanceLabel && myStanceLabel !== "unknown" && opponentStanceLabel !== "unknown" && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "6px 12px", background: "rgba(239,68,68,.06)", borderRadius: 8, border: "1px solid rgba(239,68,68,.15)" }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)" }}>{myStanceLabel}</span>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#ef4444", padding: "1px 6px", background: "rgba(239,68,68,.1)", borderRadius: 4 }}>VS</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#8B4513" }}>{opponentStanceLabel}</span>
-              <span style={{ fontSize: 10, color: "var(--muted)" }}>({categoryConfig?.label || category})</span>
             </div>
           )}
 
@@ -473,79 +400,90 @@ export default function DebateRoom({
             <div className="vote-pct right">{normB}%</div>
           </div>
 
-          {/* Topic banner */}
+          {/* Topic banner — static, no shuffle */}
           <div className="topic-banner">
             <span className="topic-label">Topic</span>
             <span className="topic-text">{debateTopic.topic}</span>
-            <span className={`topic-source ${debateTopic.source}`}>
-              {debateTopic.source === "stance" ? "From stances" : debateTopic.source === "custom" ? "Custom" : "Suggested"}
-            </span>
-            <button className="topic-shuffle-btn" title="Shuffle topic" onClick={shuffleTopic}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" />
-                <polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" />
-                <line x1="4" y1="4" x2="9" y2="9" />
+            {categoryConfig && (
+              <span className="category-pill">{categoryConfig.label}</span>
+            )}
+          </div>
+
+          {/* Controls bar — sleek, no emoji */}
+          <div className="controls-bar">
+            <button className={`ctrl-btn ${isMicOn ? "active" : ""}`} onClick={toggleMic} title={isMicOn ? "Mute" : "Unmute"}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isMicOn ? (
+                  <>
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </>
+                ) : (
+                  <>
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.5-.36 2.18" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </>
+                )}
               </svg>
             </button>
-          </div>
-
-          {/* Custom topic input */}
-          <div className="topic-propose-row">
-            <input
-              className="topic-propose-input"
-              placeholder="Propose your own topic..."
-              value={customTopicInput}
-              onChange={(e) => setCustomTopicInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && customTopicInput.trim()) {
-                  setDebateTopic({ topic: customTopicInput.trim(), source: "custom" });
-                  setCustomTopicInput("");
-                }
-              }}
-            />
-            <button className="topic-propose-btn" onClick={() => {
-              if (!customTopicInput.trim()) return;
-              setDebateTopic({ topic: customTopicInput.trim(), source: "custom" });
-              setCustomTopicInput("");
-            }}>Set Topic</button>
-          </div>
-
-          {/* Open Mic indicator */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "4px 0" }}>
-            <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>🎙️ Open Mic — No rules, no turns, no time limit</span>
-          </div>
-
-          {/* Controls bar */}
-          <div className="controls-bar">
-            <button className={`ctrl-btn ${isMicOn ? "active" : ""}`} onClick={toggleMic}>
-              {isMicOn ? "🎙️" : "🔇"}
+            <button className={`ctrl-btn ${isCamOn ? "active" : ""}`} onClick={toggleCam} title={isCamOn ? "Camera off" : "Camera on"}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isCamOn ? (
+                  <>
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                  </>
+                ) : (
+                  <>
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                    <path d="M21 21H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34" />
+                  </>
+                )}
+              </svg>
             </button>
-            <button className={`ctrl-btn ${isCamOn ? "active" : ""}`} onClick={toggleCam}>
-              {isCamOn ? "📹" : "📷"}
-            </button>
-            <button className="factcheck-btn" onClick={() => {
+            <button className="ctrl-btn factcheck-ctrl" onClick={() => {
               const q = prompt("Fact-check a claim:");
               if (q) submitFactCheck(q);
             }} title="Fact-check a claim">
-              🔍 Fact Check
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span>Fact Check</span>
             </button>
             {isActive && (
               <ReportButton reportedUserId={opponent.id} reportedUsername={opponent.username} debateId={debateId} />
             )}
             {isActive ? (
-              <button className="ctrl-btn danger" onClick={handleEndDebate} title="End debate">✕</button>
+              <button className="ctrl-btn danger" onClick={handleEndDebate} title="End debate">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             ) : (
-              <button className="ctrl-btn" onClick={handleLeave} style={{ fontSize: 11, width: "auto", borderRadius: 6, padding: "0 14px", fontWeight: 700 }}>Leave</button>
+              <button className="ctrl-btn leave-btn" onClick={handleLeave}>Leave</button>
             )}
             {isActive && (
-              <button className="ctrl-btn next-btn" onClick={handleSkip}>⏭ Next</button>
+              <button className="ctrl-btn next-btn" onClick={handleSkip}>
+                <span>Next</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 4 15 12 5 20 5 4" />
+                  <line x1="19" y1="5" x2="19" y2="19" />
+                </svg>
+              </button>
             )}
           </div>
 
           {/* Dev mode indicator */}
           {devMode && (
             <div style={{ textAlign: "center", fontSize: 10, color: "#f59e0b", padding: 4, background: "rgba(245,158,11,.08)", borderRadius: 6 }}>
-              ⚡ Dev Mode — LiveKit not connected, video disabled
+              Dev Mode — LiveKit not connected, video disabled
             </div>
           )}
         </div>
