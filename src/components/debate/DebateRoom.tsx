@@ -141,6 +141,7 @@ export default function DebateRoom({
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
   const [devMode, setDevMode] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [connectionState, setConnectionState] = useState<string>("disconnected");
 
   // Video state
@@ -339,16 +340,18 @@ export default function DebateRoom({
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (localVideoTrack && localVideoRef.current) {
-      localVideoTrack.attach(localVideoRef.current);
-      return () => { localVideoTrack.detach(localVideoRef.current!); };
+    const el = localVideoRef.current;
+    if (localVideoTrack && el) {
+      localVideoTrack.attach(el);
+      return () => { localVideoTrack.detach(el); };
     }
   }, [localVideoTrack]);
 
   useEffect(() => {
-    if (remoteVideoTrack && remoteVideoRef.current) {
-      remoteVideoTrack.attach(remoteVideoRef.current);
-      return () => { remoteVideoTrack.detach(remoteVideoRef.current!); };
+    const el = remoteVideoRef.current;
+    if (remoteVideoTrack && el) {
+      remoteVideoTrack.attach(el);
+      return () => { remoteVideoTrack.detach(el); };
     }
   }, [remoteVideoTrack]);
 
