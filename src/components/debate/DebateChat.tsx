@@ -47,10 +47,12 @@ export default function DebateChat({
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
 
   // Load existing messages and subscribe to new ones
   useEffect(() => {
+    const supabase = supabaseRef.current;
+
     // Fetch existing messages
     const loadMessages = async () => {
       const { data } = await supabase
@@ -69,9 +71,10 @@ export default function DebateChat({
 
     loadMessages();
 
-    // Subscribe to new messages via Supabase Realtime
+    // Use unique channel name to prevent Supabase reuse conflicts
+    const channelName = `debate-chat-${debateId}-${Date.now()}`;
     const channel = supabase
-      .channel(`debate-chat-${debateId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -107,7 +110,7 @@ export default function DebateChat({
     const content = input.trim();
     setInput("");
 
-    await supabase.from("messages").insert({
+    await supabaseRef.current.from("messages").insert({
       debate_id: debateId,
       user_id: currentUserId,
       content,
@@ -121,7 +124,7 @@ export default function DebateChat({
     if (isSending || !isActive) return;
     setIsSending(true);
 
-    await supabase.from("messages").insert({
+    await supabaseRef.current.from("messages").insert({
       debate_id: debateId,
       user_id: currentUserId,
       content: emoji,
