@@ -91,7 +91,8 @@ export default function DebateChat({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [debateId, supabase, userAId, userAUsername, userBUsername]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debateId, userAId, userAUsername, userBUsername]);
 
   // Auto-scroll to bottom
   useEffect(() => {
