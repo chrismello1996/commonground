@@ -401,37 +401,39 @@ export default function DebateRoom({
             <div className="vote-pct right">{normB}%</div>
           </div>
 
-          {/* Topic banner with propose/set */}
-          <div className="topic-banner">
-            <span className="topic-label">Topic</span>
-            <span className="topic-text">{debateTopic}</span>
-            {categoryConfig && (
-              <span className="category-pill">{categoryConfig.label}</span>
-            )}
-          </div>
-          <div className="topic-propose-row">
-            <input
-              className="topic-propose-input"
-              placeholder="Propose a topic..."
-              value={proposedTopic}
-              onChange={(e) => setProposedTopic(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && proposedTopic.trim()) {
+          {/* Topic banner with inline propose */}
+          <div className="topic-banner-wrap">
+            <div className="topic-banner">
+              <span className="topic-label">Topic</span>
+              <span className="topic-text">{debateTopic}</span>
+              {categoryConfig && (
+                <span className="category-pill">{categoryConfig.label}</span>
+              )}
+            </div>
+            <div className="topic-propose-row">
+              <input
+                className="topic-propose-input"
+                placeholder="Propose a topic..."
+                value={proposedTopic}
+                onChange={(e) => setProposedTopic(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && proposedTopic.trim()) {
+                    setDebateTopic(proposedTopic.trim());
+                    setProposedTopic("");
+                  }
+                }}
+              />
+              <button
+                className="topic-set-btn"
+                onClick={() => {
+                  if (!proposedTopic.trim()) return;
                   setDebateTopic(proposedTopic.trim());
                   setProposedTopic("");
-                }
-              }}
-            />
-            <button
-              className="topic-set-btn"
-              onClick={() => {
-                if (!proposedTopic.trim()) return;
-                setDebateTopic(proposedTopic.trim());
-                setProposedTopic("");
-              }}
-            >
-              Set Topic
-            </button>
+                }}
+              >
+                Set Topic
+              </button>
+            </div>
           </div>
 
           {/* Controls bar — sleek, no emoji */}

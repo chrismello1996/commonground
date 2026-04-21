@@ -38,8 +38,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  gap: 8px;
+  padding: 8px 10px;
+  gap: 4px;
 }
 
 .video-grid {
@@ -389,14 +389,20 @@
 }
 
 /* ===== TOPIC BANNER ===== */
+.topic-banner-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(139, 69, 19, 0.06));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+}
+
 .topic-banner {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(139, 69, 19, 0.06));
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 8px;
 }
 
 .topic-banner .topic-label {
@@ -465,7 +471,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .ctrl-btn {
