@@ -49,7 +49,7 @@ export default async function DebatePage({ params }: DebatePageProps) {
   const stanceB = stances?.find((s) => s.user_id === debate.user_b)?.stance || "unknown";
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen">
       <DebateRoom
         debateId={debate.id}
         currentUserId={user.id}

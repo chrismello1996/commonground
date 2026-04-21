@@ -3,16 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-const EMOTES = [
-  { emoji: "👏", label: "Clap" },
-  { emoji: "🔥", label: "Fire" },
-  { emoji: "💯", label: "100" },
-  { emoji: "😂", label: "Laugh" },
-  { emoji: "🤔", label: "Think" },
-  { emoji: "👎", label: "Disagree" },
-  { emoji: "🎯", label: "Bullseye" },
-  { emoji: "💀", label: "Dead" },
-];
+const EMOTES = ["🔥", "💀", "🫡", "💯", "🤡", "👑", "⚡", "🧠"];
 
 interface ChatMessage {
   id: string;
@@ -32,6 +23,11 @@ interface DebateChatProps {
   userAUsername: string;
   userBUsername: string;
   isActive: boolean;
+  userAColor?: string;
+  userBColor?: string;
+  userAElo?: number;
+  userBElo?: number;
+  onReaction?: (emoji: string) => void;
 }
 
 export default function DebateChat({
@@ -42,6 +38,11 @@ export default function DebateChat({
   userAUsername,
   userBUsername,
   isActive,
+  userAColor = "#10b981",
+  userBColor = "#8B4513",
+  userAElo = 1200,
+  userBElo = 1200,
+  onReaction,
 }: DebateChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -53,7 +54,6 @@ export default function DebateChat({
   useEffect(() => {
     const supabase = supabaseRef.current;
 
-    // Fetch existing messages
     const loadMessages = async () => {
       const { data } = await supabase
         .from("messages")
@@ -62,7 +62,7 @@ export default function DebateChat({
         .order("created_at", { ascending: true });
 
       if (data) {
-        setMessages(data.map(m => ({
+        setMessages(data.map((m) => ({
           ...m,
           username: m.user_id === userAId ? userAUsername : userBUsername,
         })));
@@ -71,7 +71,6 @@ export default function DebateChat({
 
     loadMessages();
 
-    // Use unique channel name to prevent Supabase reuse conflicts
     const channelName = `debate-chat-${debateId}-${Date.now()}`;
     const channel = supabase
       .channel(channelName)
@@ -94,7 +93,7 @@ export default function DebateChat({
     return () => {
       supabase.removeChannel(channel);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debateId, userAId, userAUsername, userBUsername]);
 
   // Auto-scroll to bottom
@@ -102,10 +101,8 @@ export default function DebateChat({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendMessage = async () => {
     if (!input.trim() || isSending || !isActive) return;
-
     setIsSending(true);
     const content = input.trim();
     setInput("");
@@ -131,103 +128,87 @@ export default function DebateChat({
       type: "emote",
     });
 
+    if (onReaction) onReaction(emoji);
     setIsSending(false);
   };
 
+  const getEloColor = (elo: number) => {
+    if (elo >= 1800) return { bg: "rgba(139,69,19,.2)", color: "#f5a623" };
+    if (elo >= 1500) return { bg: "rgba(192,192,192,.2)", color: "#c0c0c0" };
+    return { bg: "rgba(205,127,50,.2)", color: "#cd7f32" };
+  };
+
   return (
-    <div className="flex flex-col h-full bg-gray-900 border-l border-gray-800">
-      {/* Chat header */}
-      <div className="px-4 py-3 border-b border-gray-800">
-        <h3 className="text-sm font-semibold text-white">Debate Chat</h3>
-        <p className="text-[10px] text-gray-500">{messages.length} messages</p>
+    <div className="chat-sidebar">
+      <div className="chat-header">
+        <h3>Stream Chat</h3>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div className="chat-messages">
         {messages.length === 0 && (
-          <p className="text-gray-600 text-xs text-center mt-4">No messages yet. Say something!</p>
+          <div className="twitch-msg system-msg" style={{ textAlign: "center", marginTop: 12 }}>
+            ⚡ Debate started — say something!
+          </div>
         )}
         {messages.map((msg) => {
-          const isMe = msg.user_id === currentUserId;
-          const isSystem = msg.type === "system";
+          const isUserAMsg = msg.user_id === userAId;
+          const color = isUserAMsg ? userAColor : userBColor;
+          const elo = isUserAMsg ? userAElo : userBElo;
+          const eloStyle = getEloColor(elo);
+          const username = msg.username || (msg.user_id === currentUserId ? currentUsername : "Opponent");
 
-          if (isSystem) {
+          if (msg.type === "system") {
             return (
-              <div key={msg.id} className="text-center">
-                <span className="text-xs text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded">
-                  {msg.content}
-                </span>
-              </div>
+              <div key={msg.id} className="twitch-msg system-msg">⚡ {msg.content}</div>
             );
           }
 
           if (msg.type === "emote") {
             return (
-              <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                <span className={`text-[10px] mb-0.5 ${isMe ? "text-emerald-500" : "text-red-400"}`}>
-                  {msg.username || (isMe ? currentUsername : "Opponent")}
-                </span>
-                <div className="text-3xl py-1 px-2">{msg.content}</div>
+              <div key={msg.id} className="twitch-msg">
+                <span className="elo-tag" style={{ background: eloStyle.bg, color: eloStyle.color }}>{elo}</span>
+                <span className="username" style={{ color }}>{username}</span>
+                <span style={{ color: "var(--txt2)" }}>: </span>
+                <span style={{ fontSize: 18 }}>{msg.content}</span>
               </div>
             );
           }
 
           return (
-            <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-              <span className={`text-[10px] mb-0.5 ${isMe ? "text-emerald-500" : "text-red-400"}`}>
-                {msg.username || (isMe ? currentUsername : "Opponent")}
-              </span>
-              <div className={`max-w-[85%] px-3 py-1.5 rounded-lg text-sm ${
-                isMe
-                  ? "bg-emerald-600/20 text-emerald-100 border border-emerald-500/20"
-                  : "bg-gray-800 text-gray-200 border border-gray-700"
-              }`}>
-                {msg.content}
-              </div>
+            <div key={msg.id} className="twitch-msg">
+              <span className="elo-tag" style={{ background: eloStyle.bg, color: eloStyle.color }}>{elo}</span>
+              <span className="username" style={{ color }}>{username}</span>
+              <span style={{ color: "var(--txt2)" }}>: </span>
+              <span>{msg.content}</span>
             </div>
           );
         })}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Emote bar */}
-      {isActive && (
-        <div className="px-4 py-2 border-t border-gray-800 flex gap-1 flex-wrap justify-center">
-          {EMOTES.map((emote) => (
-            <button
-              key={emote.emoji}
-              onClick={() => sendEmote(emote.emoji)}
-              disabled={isSending}
-              className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 flex items-center justify-center text-base transition-colors disabled:opacity-50"
-              title={emote.label}
-            >
-              {emote.emoji}
+      <div className="chat-input-area">
+        <div className="emote-row">
+          {EMOTES.map((e) => (
+            <button key={e} className="emote-btn" onClick={() => sendEmote(e)} disabled={!isActive || isSending}>
+              {e}
             </button>
           ))}
         </div>
-      )}
-
-      {/* Input */}
-      <form onSubmit={sendMessage} className="px-4 py-3 border-t border-gray-800">
-        <div className="flex gap-2">
+        <div className="chat-input-row">
           <input
-            type="text"
+            className="chat-input"
+            placeholder={isActive ? "Say anything..." : "Debate ended"}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isActive ? "Type a message..." : "Debate ended"}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             disabled={!isActive}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 disabled:opacity-50"
             maxLength={500}
           />
-          <button
-            type="submit"
-            disabled={!input.trim() || isSending || !isActive}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:hover:bg-emerald-600"
-          >
-            Send
+          <button className="chat-send" onClick={sendMessage} disabled={!input.trim() || isSending || !isActive}>
+            Chat
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

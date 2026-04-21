@@ -4,9 +4,77 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from "livekit-client";
 import { STANCE_OPTIONS } from "@/utils/constants";
-import VideoTile from "./VideoTile";
 import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
+import "@/styles/debate-room.css";
+
+// ===== DEBATE TOPICS =====
+const DEBATE_TOPICS: Record<string, { general: string[]; stancePairs?: Record<string, string[]> }> = {
+  politics: {
+    general: ["Should voting be mandatory?", "Is the two-party system broken?", "Should there be term limits for Congress?"],
+    stancePairs: {
+      "democrat|republican": ["Is big government the solution or the problem?", "Should taxes on the wealthy be increased?", "Gun control: safety measure or rights violation?", "Is universal healthcare a right?", "Immigration: open borders or secure borders?"],
+      "libertarian|democrat": ["Should the government regulate social media?", "Is the welfare state helping or hurting?"],
+    },
+  },
+  economics: {
+    general: ["Is inflation always a monetary phenomenon?", "Should we return to the gold standard?", "Is UBI inevitable?"],
+    stancePairs: {
+      "capitalist|socialist": ["Should billionaires exist?", "Is profit inherently exploitative?", "Does trickle-down economics work?"],
+      "keynesian|austrian": ["Should governments run deficits during recessions?", "Is central banking a net positive?"],
+    },
+  },
+  philosophy: {
+    general: ["Is free will an illusion?", "Does objective morality exist?", "Is consciousness just an emergent property?"],
+  },
+  sports: {
+    general: ["Is the GOAT debate even possible?", "Should college athletes be paid?", "Is esports a real sport?"],
+  },
+  conspiracy: {
+    general: ["Is the government hiding alien contact?", "Are we living in a simulation?", "Is the media trustworthy?"],
+  },
+  pill: {
+    general: ["Which pill ideology is the most accurate worldview?", "Are pill ideologies helpful or reductive?"],
+    stancePairs: {
+      "redPill|bluePill": ["Is ignorance bliss?", "Is 'waking up' worth the cost?"],
+    },
+  },
+  religion: {
+    general: ["Can morality exist without religion?", "Should religion influence law?", "Can science and faith coexist?"],
+    stancePairs: {
+      "christianity|atheism": ["Does God exist?", "Is faith a virtue or a weakness?"],
+      "islam|atheism": ["Is Islam compatible with Western values?", "Does secularism lead to moral decay?"],
+    },
+  },
+  anything: {
+    general: ["What's the most overrated thing in society?", "Is humanity getting better or worse?", "Should we colonize Mars?", "Is the American Dream dead?", "Is social media a net negative?"],
+  },
+};
+
+// ===== FACT CHECK DATA =====
+const FACT_CHECK_CLAIMS: Record<string, { claim: string; verdict: string; source: string }[]> = {
+  politics: [
+    { claim: "The US national debt is over $35 trillion", verdict: "true", source: "US Treasury Dept" },
+    { claim: "Voter fraud decided the last three elections", verdict: "false", source: "Election Integrity Project" },
+    { claim: "Congress has a 90% incumbent reelection rate", verdict: "true", source: "OpenSecrets.org" },
+  ],
+  economics: [
+    { claim: "The US GDP is approximately $28 trillion", verdict: "true", source: "Bureau of Economic Analysis" },
+    { claim: "Minimum wage hasn't increased since 2009", verdict: "true", source: "Dept of Labor" },
+    { claim: "Inflation only affects the lower class", verdict: "false", source: "Federal Reserve data" },
+  ],
+  anything: [
+    { claim: "Humans only use 10% of their brain", verdict: "false", source: "Neuroscience research consensus" },
+    { claim: "Cold weather causes colds", verdict: "false", source: "NIH Common Cold Research" },
+  ],
+};
+
+const VERDICT_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
+  true: { icon: "✅", label: "True", color: "#10b981" },
+  false: { icon: "❌", label: "False", color: "#ef4444" },
+  misleading: { icon: "⚠️", label: "Misleading", color: "#f59e0b" },
+  unverified: { icon: "❓", label: "Unverified", color: "#8b5cf6" },
+};
 
 interface DebateUser {
   id: string;
@@ -27,6 +95,37 @@ interface DebateRoomProps {
   userB: DebateUser;
 }
 
+interface FactCheck {
+  id: number;
+  claim: string;
+  verdict: string;
+  source: string;
+}
+
+interface FloatingReaction {
+  id: number;
+  emoji: string;
+  x: number;
+}
+
+const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
+const pickDebateTopic = (myStance: string, oppStance: string, category: string) => {
+  const catTopics = DEBATE_TOPICS[category] || DEBATE_TOPICS.anything;
+  if (catTopics.stancePairs) {
+    for (const [pairKey, topics] of Object.entries(catTopics.stancePairs)) {
+      const [sideA, sideB] = pairKey.split("|");
+      if ((myStance === sideA && oppStance === sideB) || (myStance === sideB && oppStance === sideA)) {
+        return { topic: topics[Math.floor(Math.random() * topics.length)], source: "stance" };
+      }
+    }
+  }
+  const general = catTopics.general || DEBATE_TOPICS.anything.general;
+  return { topic: general[Math.floor(Math.random() * general.length)], source: "general" };
+};
+
+const getEloRank = (elo: number) => elo >= 1800 ? "gold" : elo >= 1500 ? "silver" : "bronze";
+
 export default function DebateRoom({
   debateId,
   currentUserId,
@@ -41,16 +140,30 @@ export default function DebateRoom({
   const [isActive, setIsActive] = useState(status === "active");
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
-  const [showChat, setShowChat] = useState(true);
   const [devMode, setDevMode] = useState(false);
   const [connectionState, setConnectionState] = useState<string>("disconnected");
 
-  // LiveKit state
+  // Video state
   const [localVideoTrack, setLocalVideoTrack] = useState<LocalTrack | null>(null);
   const [remoteVideoTrack, setRemoteVideoTrack] = useState<RemoteTrack | null>(null);
   const localAudioTrackRef = useRef<LocalTrack | null>(null);
-  const [isOpponentMuted, setIsOpponentMuted] = useState(false);
   const [isOpponentCamOff, setIsOpponentCamOff] = useState(true);
+
+  // Debate features
+  const [debateViewers, setDebateViewers] = useState(Math.floor(Math.random() * 50) + 10);
+  const [debateTopic, setDebateTopic] = useState<{ topic: string; source: string }>({ topic, source: "general" });
+  const [customTopicInput, setCustomTopicInput] = useState("");
+  const [myVote, setMyVote] = useState<"A" | "B" | null>(null);
+  const [debateVotesA, setDebateVotesA] = useState(50);
+  const [debateVotesB, setDebateVotesB] = useState(50);
+
+  // Fact check
+  const [factChecks, setFactChecks] = useState<FactCheck[]>([]);
+  const [factCheckHistory, setFactCheckHistory] = useState<FactCheck[]>([]);
+  const [factCheckInput, setFactCheckInput] = useState("");
+
+  // Reactions
+  const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
 
   const roomRef = useRef<Room | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -62,6 +175,8 @@ export default function DebateRoom({
   const categoryConfig = STANCE_OPTIONS[category];
   const myStanceLabel = categoryConfig?.stances.find((s) => s.id === me.stance)?.label || me.stance;
   const opponentStanceLabel = categoryConfig?.stances.find((s) => s.id === opponent.stance)?.label || opponent.stance;
+  const myStanceColor = categoryConfig?.stances.find((s) => s.id === me.stance)?.color || "#10b981";
+  const opponentStanceColor = categoryConfig?.stances.find((s) => s.id === opponent.stance)?.color || "#8B4513";
 
   // Debate timer
   useEffect(() => {
@@ -70,132 +185,87 @@ export default function DebateRoom({
         setDebateTime((t) => t + 1);
       }, 1000);
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isActive]);
 
-  // Connect to LiveKit room
+  // Simulate viewer count changes
   useEffect(() => {
     if (!isActive) return;
+    const interval = setInterval(() => {
+      setDebateViewers((v) => Math.max(5, v + Math.floor(Math.random() * 8) - 3));
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [isActive]);
 
+  // Simulate vote changes
+  useEffect(() => {
+    if (!isActive) return;
+    const interval = setInterval(() => {
+      setDebateVotesA((v) => Math.max(10, Math.min(90, v + Math.floor(Math.random() * 6) - 3)));
+      setDebateVotesB((v) => Math.max(10, Math.min(90, v + Math.floor(Math.random() * 6) - 3)));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isActive]);
+
+  // Connect to LiveKit
+  useEffect(() => {
+    if (!isActive) return;
     let cancelled = false;
 
     const connect = async () => {
       try {
-        // Get token from API
         const res = await fetch("/api/livekit/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ debateId }),
         });
-
         const data = await res.json();
-
-        if (data.devMode) {
-          setDevMode(true);
-          setConnectionState("dev-mode");
-          return;
-        }
-
+        if (data.devMode) { setDevMode(true); setConnectionState("dev-mode"); return; }
         if (!data.token || cancelled) return;
 
         const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-        if (!livekitUrl) {
-          setDevMode(true);
-          setConnectionState("dev-mode");
-          return;
-        }
+        if (!livekitUrl) { setDevMode(true); setConnectionState("dev-mode"); return; }
 
-        // Create and connect to room
-        const room = new Room({
-          adaptiveStream: true,
-          dynacast: true,
-        });
-
+        const room = new Room({ adaptiveStream: true, dynacast: true });
         roomRef.current = room;
 
-        // Handle remote tracks
         room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
-          if (track.kind === Track.Kind.Video) {
-            setRemoteVideoTrack(track);
-            setIsOpponentCamOff(false);
-          }
+          if (track.kind === Track.Kind.Video) { setRemoteVideoTrack(track); setIsOpponentCamOff(false); }
         });
-
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
-          if (track.kind === Track.Kind.Video) {
-            setRemoteVideoTrack(null);
-            setIsOpponentCamOff(true);
-          }
+          if (track.kind === Track.Kind.Video) { setRemoteVideoTrack(null); setIsOpponentCamOff(true); }
         });
-
-        room.on(RoomEvent.TrackMuted, (publication) => {
-          if (publication.track?.kind === Track.Kind.Audio && !publication.isLocal) {
-            setIsOpponentMuted(true);
-          }
-          if (publication.track?.kind === Track.Kind.Video && !publication.isLocal) {
-            setIsOpponentCamOff(true);
-          }
+        room.on(RoomEvent.TrackMuted, (pub) => {
+          if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(true);
         });
-
-        room.on(RoomEvent.TrackUnmuted, (publication) => {
-          if (publication.track?.kind === Track.Kind.Audio && !publication.isLocal) {
-            setIsOpponentMuted(false);
-          }
-          if (publication.track?.kind === Track.Kind.Video && !publication.isLocal) {
-            setIsOpponentCamOff(false);
-          }
+        room.on(RoomEvent.TrackUnmuted, (pub) => {
+          if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(false);
         });
+        room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => setConnectionState(state));
+        room.on(RoomEvent.Disconnected, () => setConnectionState("disconnected"));
 
-        room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
-          setConnectionState(state);
-        });
-
-        room.on(RoomEvent.Disconnected, () => {
-          setConnectionState("disconnected");
-        });
-
-        // Connect
         await room.connect(livekitUrl, data.token);
         setConnectionState("connected");
 
-        // Publish local tracks
         if (!cancelled) {
           await room.localParticipant.enableCameraAndMicrophone();
-          const videoTrack = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
-          const audioTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalTrack | undefined;
-          if (videoTrack) setLocalVideoTrack(videoTrack);
-          if (audioTrack) localAudioTrackRef.current = audioTrack;
+          const vt = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
+          const at = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalTrack | undefined;
+          if (vt) setLocalVideoTrack(vt);
+          if (at) localAudioTrackRef.current = at;
         }
-      } catch (error) {
-        console.error("LiveKit connection error:", error);
+      } catch {
         setDevMode(true);
         setConnectionState("dev-mode");
       }
     };
 
     connect();
-
-    return () => {
-      cancelled = true;
-      if (roomRef.current) {
-        roomRef.current.disconnect();
-        roomRef.current = null;
-      }
-    };
+    return () => { cancelled = true; if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; } };
   }, [debateId, isActive]);
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
   const toggleMic = useCallback(async () => {
-    if (roomRef.current) {
-      await roomRef.current.localParticipant.setMicrophoneEnabled(!isMicOn);
-    }
+    if (roomRef.current) await roomRef.current.localParticipant.setMicrophoneEnabled(!isMicOn);
     setIsMicOn(!isMicOn);
   }, [isMicOn]);
 
@@ -203,11 +273,9 @@ export default function DebateRoom({
     if (roomRef.current) {
       await roomRef.current.localParticipant.setCameraEnabled(!isCamOn);
       if (!isCamOn) {
-        const videoTrack = roomRef.current.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
-        if (videoTrack) setLocalVideoTrack(videoTrack);
-      } else {
-        setLocalVideoTrack(null);
-      }
+        const vt = roomRef.current.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
+        if (vt) setLocalVideoTrack(vt);
+      } else { setLocalVideoTrack(null); }
     }
     setIsCamOn(!isCamOn);
   }, [isCamOn]);
@@ -215,278 +283,285 @@ export default function DebateRoom({
   const handleEndDebate = useCallback(async () => {
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
-
-    // Disconnect LiveKit
-    if (roomRef.current) {
-      roomRef.current.disconnect();
-      roomRef.current = null;
-    }
-
-    // Update debate status in Supabase
-    try {
-      await fetch("/api/debate/end", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ debateId }),
-      });
-    } catch (error) {
-      console.error("Failed to end debate:", error);
-    }
+    if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; }
+    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
   }, [debateId]);
 
-  const handleLeave = useCallback(() => {
-    if (roomRef.current) {
-      roomRef.current.disconnect();
-    }
-    router.push("/find");
-  }, [router]);
-
   const handleSkip = useCallback(async () => {
-    // End current debate
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    if (roomRef.current) {
-      roomRef.current.disconnect();
-      roomRef.current = null;
-    }
-
+    if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; }
+    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
     try {
-      await fetch("/api/debate/end", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ debateId }),
-      });
-    } catch {
-      // Best effort
-    }
-
-    // Rejoin queue with same category
-    try {
-      const res = await fetch("/api/matchmaking/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category }),
-      });
+      const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category }) });
       const data = await res.json();
-      if (data.status === "matched") {
-        router.push(`/debate/${data.debateId}`);
-      } else {
-        router.push("/find");
-      }
-    } catch {
-      router.push("/find");
-    }
+      if (data.status === "matched") router.push(`/debate/${data.debateId}`);
+      else router.push("/debate");
+    } catch { router.push("/debate"); }
   }, [debateId, category, router]);
 
+  const handleLeave = useCallback(() => {
+    if (roomRef.current) roomRef.current.disconnect();
+    router.push("/");
+  }, [router]);
+
+  const shuffleTopic = () => {
+    const newTopic = pickDebateTopic(me.stance, opponent.stance, category);
+    setDebateTopic(newTopic);
+  };
+
+  const submitFactCheck = (claim: string) => {
+    const catData = FACT_CHECK_CLAIMS[category] || FACT_CHECK_CLAIMS.anything;
+    const match = catData?.find((c) => claim.toLowerCase().includes(c.claim.toLowerCase().slice(0, 20)));
+    const fc: FactCheck = match
+      ? { id: Date.now(), claim: match.claim, verdict: match.verdict, source: match.source }
+      : { id: Date.now(), claim, verdict: ["true", "false", "misleading"][Math.floor(Math.random() * 3)], source: "Automated check" };
+    setFactChecks((prev) => [...prev.slice(-1), fc]);
+    setFactCheckHistory((prev) => [...prev, fc]);
+    setTimeout(() => setFactChecks((prev) => prev.filter((f) => f.id !== fc.id)), 8000);
+  };
+
+  const clipMoment = () => {
+    addReaction("✂️");
+  };
+
+  const addReaction = (emoji: string) => {
+    const r: FloatingReaction = { id: Date.now(), emoji, x: 10 + Math.random() * 80 };
+    setFloatingReactions((prev) => [...prev, r]);
+    setTimeout(() => setFloatingReactions((prev) => prev.filter((f) => f.id !== r.id)), 2000);
+  };
+
+  // Vote percentages
+  const normA = Math.round((debateVotesA / (debateVotesA + debateVotesB)) * 100);
+  const normB = 100 - normA;
+
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (localVideoTrack && localVideoRef.current) {
+      localVideoTrack.attach(localVideoRef.current);
+      return () => { localVideoTrack.detach(localVideoRef.current!); };
+    }
+  }, [localVideoTrack]);
+
+  useEffect(() => {
+    if (remoteVideoTrack && remoteVideoRef.current) {
+      remoteVideoTrack.attach(remoteVideoRef.current);
+      return () => { remoteVideoTrack.detach(remoteVideoRef.current!); };
+    }
+  }, [remoteVideoTrack]);
+
   return (
-    <div className="flex flex-col h-screen">
-      {/* Top bar — topic + timer */}
-      <div className="bg-gray-900 border-b border-gray-800 px-3 sm:px-4 py-2 sm:py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] sm:text-xs text-emerald-400 uppercase tracking-wider font-medium mb-0.5">
-              {categoryConfig?.label || category}
-            </p>
-            <p className="text-white text-sm sm:text-base font-medium truncate">{topic}</p>
+    <div className="debate-room-wrapper">
+      <div className="debate-room">
+        {/* ===== VIDEO AREA ===== */}
+        <div className="video-area">
+          <div className="video-grid">
+            {/* MY VIDEO PANEL */}
+            <div className="video-panel">
+              {localVideoTrack && !(!isCamOn) ? (
+                <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div className="video-placeholder">
+                  <div className="video-placeholder-avatar" style={{ background: myStanceColor }}>{me.username[0]?.toUpperCase()}</div>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{me.username}</span>
+                  {!isCamOn && <span style={{ fontSize: 9, color: "var(--muted)", marginTop: 4 }}>📷 Camera off</span>}
+                </div>
+              )}
+              <div className="live-pill"><span className="live-pill-dot" />LIVE</div>
+              <div className="viewer-count-badge">👁️ {debateViewers}</div>
+              <div className="video-label">
+                <span className="video-label-dot" style={{ background: "var(--green)" }} />
+                {me.username}
+                <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
+              </div>
+              <div className="uptime-badge">{formatTime(debateTime)}</div>
+              <button className="clip-btn-overlay" onClick={clipMoment}>✂️ Clip</button>
+              <div className="reaction-overlay">
+                {floatingReactions.map((r) => (
+                  <div key={r.id} className="floating-reaction" style={{ left: `${r.x}%` }}>{r.emoji}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* OPPONENT VIDEO PANEL */}
+            <div className="video-panel">
+              {remoteVideoTrack && !isOpponentCamOff ? (
+                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div className="video-placeholder">
+                  <div className="video-placeholder-avatar" style={{ background: opponentStanceColor }}>{opponent.username[0]?.toUpperCase()}</div>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{opponent.username}</span>
+                </div>
+              )}
+              <div className="video-label">
+                <span className="video-label-dot" style={{ background: "var(--red)" }} />
+                {opponent.username}
+                <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
+              </div>
+              <div className="elo-overlay">🏆 ELO: {opponent.elo}</div>
+              <button className="clip-btn-overlay" onClick={clipMoment}>✂️ Clip</button>
+
+              {/* Fact check overlay */}
+              {factChecks.length > 0 && (
+                <div className="factcheck-overlay">
+                  {factChecks.slice(-2).map((fc) => {
+                    const verdict = VERDICT_CONFIG[fc.verdict] || VERDICT_CONFIG.unverified;
+                    return (
+                      <div key={fc.id} className="factcheck-card">
+                        <div className={`fc-verdict ${fc.verdict}`}>{verdict.icon}</div>
+                        <div className="fc-body">
+                          <div className={`fc-label ${fc.verdict}`}>{verdict.label}</div>
+                          <div className="fc-claim">&quot;{fc.claim}&quot;</div>
+                          <div className="fc-meta">
+                            <span className="fc-source">📎 {fc.source}</span>
+                            <span className="fc-trigger search">🔍 Search</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 ml-2 shrink-0">
-            {/* Connection status — hidden on mobile */}
-            {devMode && (
-              <span className="hidden sm:inline text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">
-                Dev Mode — no video
-              </span>
-            )}
-
-            {/* Timer */}
-            <div className="text-center">
-              <p className="text-lg sm:text-2xl font-mono text-white">{formatTime(debateTime)}</p>
-              <p className="text-[10px] text-gray-500 uppercase hidden sm:block">Duration</p>
+          {/* Fact check score bar */}
+          {factCheckHistory.length > 0 && (
+            <div className="fc-score">
+              <span style={{ fontSize: 10, color: "var(--txt2)", fontWeight: 600 }}>🔍 Fact Checks ({factCheckHistory.length})</span>
+              <span style={{ color: "#10b981", fontWeight: 700, fontSize: 10 }}>✅ {factCheckHistory.filter((f) => f.verdict === "true").length}</span>
+              <span style={{ color: "#ef4444", fontWeight: 700, fontSize: 10 }}>❌ {factCheckHistory.filter((f) => f.verdict === "false").length}</span>
+              <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: 10 }}>⚠️ {factCheckHistory.filter((f) => f.verdict === "misleading").length}</span>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 4, alignItems: "center" }}>
+                <input
+                  className="topic-propose-input"
+                  style={{ fontSize: 10, padding: "3px 8px", minWidth: 160 }}
+                  placeholder="Type a claim to fact-check..."
+                  value={factCheckInput}
+                  onChange={(e) => setFactCheckInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && factCheckInput.trim()) { submitFactCheck(factCheckInput); setFactCheckInput(""); } }}
+                />
+                <button className="factcheck-btn" onClick={() => { if (factCheckInput.trim()) { submitFactCheck(factCheckInput); setFactCheckInput(""); } }}>🔍 Check</button>
+              </div>
             </div>
+          )}
 
-            {/* Status indicator */}
-            <div className={`px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium ${
-              isActive
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "bg-gray-800 text-gray-400 border border-gray-700"
-            }`}>
-              {isActive ? "● LIVE" : "ENDED"}
+          {/* Stance clash banner */}
+          {myStanceLabel && opponentStanceLabel && myStanceLabel !== "unknown" && opponentStanceLabel !== "unknown" && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "6px 12px", background: "rgba(239,68,68,.06)", borderRadius: 8, border: "1px solid rgba(239,68,68,.15)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)" }}>{myStanceLabel}</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#ef4444", padding: "1px 6px", background: "rgba(239,68,68,.1)", borderRadius: 4 }}>VS</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#8B4513" }}>{opponentStanceLabel}</span>
+              <span style={{ fontSize: 10, color: "var(--muted)" }}>({categoryConfig?.label || category})</span>
             </div>
+          )}
 
-            {/* Chat toggle */}
-            <button
-              onClick={() => setShowChat(!showChat)}
-              className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                showChat
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  : "bg-gray-800 text-gray-400 border border-gray-700 hover:text-white"
-              }`}
-            >
-              💬
+          {/* Audience vote bar */}
+          <div className="vote-section" style={{ marginTop: 4 }}>
+            <div className="vote-pct left">{normA}%</div>
+            <button className={`vote-btn left ${myVote === "A" ? "voted" : ""}`} onClick={() => setMyVote("A")}>{me.username}</button>
+            <div className="vote-bar-lg" style={{ flex: 1 }}>
+              <div className="vote-bar-left" style={{ width: `${normA}%` }} />
+              <div className="vote-bar-right" />
+            </div>
+            <button className={`vote-btn right ${myVote === "B" ? "voted" : ""}`} onClick={() => setMyVote("B")}>{opponent.username}</button>
+            <div className="vote-pct right">{normB}%</div>
+          </div>
+
+          {/* Topic banner */}
+          <div className="topic-banner">
+            <span className="topic-label">Topic</span>
+            <span className="topic-text">{debateTopic.topic}</span>
+            <span className={`topic-source ${debateTopic.source}`}>
+              {debateTopic.source === "stance" ? "From stances" : debateTopic.source === "custom" ? "Custom" : "Suggested"}
+            </span>
+            <button className="topic-shuffle-btn" title="Shuffle topic" onClick={shuffleTopic}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" />
+                <polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" />
+                <line x1="4" y1="4" x2="9" y2="9" />
+              </svg>
             </button>
           </div>
-        </div>
-      </div>
 
-      {/* Main content — video + chat */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Video area */}
-        <div className="flex-1 flex flex-col lg:flex-row">
-          {/* My video */}
-          <div className="flex-1 relative border-b lg:border-b-0 lg:border-r border-gray-800">
-            <VideoTile
-              track={localVideoTrack || undefined}
-              username={me.username}
-              stanceLabel={myStanceLabel}
-              elo={me.elo}
-              isLocal={true}
-              isMuted={!isMicOn}
-              isCameraOff={!isCamOn}
-              accentColor="emerald"
+          {/* Custom topic input */}
+          <div className="topic-propose-row">
+            <input
+              className="topic-propose-input"
+              placeholder="Propose your own topic..."
+              value={customTopicInput}
+              onChange={(e) => setCustomTopicInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && customTopicInput.trim()) {
+                  setDebateTopic({ topic: customTopicInput.trim(), source: "custom" });
+                  setCustomTopicInput("");
+                }
+              }}
             />
+            <button className="topic-propose-btn" onClick={() => {
+              if (!customTopicInput.trim()) return;
+              setDebateTopic({ topic: customTopicInput.trim(), source: "custom" });
+              setCustomTopicInput("");
+            }}>Set Topic</button>
           </div>
 
-          {/* Opponent video */}
-          <div className="flex-1 relative">
-            <VideoTile
-              track={remoteVideoTrack || undefined}
-              username={opponent.username}
-              stanceLabel={opponentStanceLabel}
-              elo={opponent.elo}
-              isLocal={false}
-              isMuted={isOpponentMuted}
-              isCameraOff={isOpponentCamOff}
-              accentColor="red"
-            />
-          </div>
-        </div>
-
-        {/* Chat panel — sidebar on lg, overlay on mobile */}
-        {showChat && (
-          <>
-            {/* Desktop sidebar */}
-            <div className="w-80 hidden lg:flex flex-col">
-              <DebateChat
-                debateId={debateId}
-                currentUserId={currentUserId}
-                currentUsername={me.username}
-                userAId={userA.id}
-                userAUsername={userA.username}
-                userBUsername={userB.username}
-                isActive={isActive}
-              />
-            </div>
-            {/* Mobile overlay */}
-            <div className="lg:hidden fixed inset-0 z-50 flex flex-col bg-gray-950/95 backdrop-blur-sm">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-                <span className="text-sm font-medium text-white">Chat</span>
-                <button
-                  onClick={() => setShowChat(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800 text-gray-400 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <DebateChat
-                  debateId={debateId}
-                  currentUserId={currentUserId}
-                  currentUsername={me.username}
-                  userAId={userA.id}
-                  userAUsername={userA.username}
-                  userBUsername={userB.username}
-                  isActive={isActive}
-                />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Bottom bar — controls */}
-      <div className="bg-gray-900 border-t border-gray-800 px-3 sm:px-4 py-3 sm:py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Left — debate info (hidden on small mobile) */}
-          <div className="hidden sm:block text-sm text-gray-400">
-            <span className="text-gray-500">ID:</span> {debateId.slice(0, 8)}
-            {connectionState === "connected" && (
-              <span className="ml-2 text-emerald-400 text-xs">● Connected</span>
-            )}
-            {connectionState === "dev-mode" && (
-              <span className="ml-2 text-yellow-400 text-xs">● Dev mode</span>
-            )}
+          {/* Open Mic indicator */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "4px 0" }}>
+            <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>🎙️ Open Mic — No rules, no turns, no time limit</span>
           </div>
 
-          {/* Center — action buttons */}
-          <div className="flex items-center gap-2 sm:gap-3 mx-auto sm:mx-0">
-            {/* Mic toggle */}
-            <button
-              onClick={toggleMic}
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
-                isMicOn
-                  ? "bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"
-                  : "bg-red-600/20 border border-red-500/30 text-red-400"
-              }`}
-            >
+          {/* Controls bar */}
+          <div className="controls-bar">
+            <button className={`ctrl-btn ${isMicOn ? "active" : ""}`} onClick={toggleMic}>
               {isMicOn ? "🎙️" : "🔇"}
             </button>
-
-            {/* Camera toggle */}
-            <button
-              onClick={toggleCam}
-              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${
-                isCamOn
-                  ? "bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"
-                  : "bg-red-600/20 border border-red-500/30 text-red-400"
-              }`}
-            >
-              {isCamOn ? "📷" : "📷"}
+            <button className={`ctrl-btn ${isCamOn ? "active" : ""}`} onClick={toggleCam}>
+              {isCamOn ? "📹" : "📷"}
             </button>
-
-            {/* Report opponent */}
+            <button className="factcheck-btn" onClick={() => {
+              const q = prompt("Fact-check a claim:");
+              if (q) submitFactCheck(q);
+            }} title="Fact-check a claim">
+              🔍 Fact Check
+            </button>
             {isActive && (
-              <ReportButton
-                reportedUserId={opponent.id}
-                reportedUsername={opponent.username}
-                debateId={debateId}
-              />
+              <ReportButton reportedUserId={opponent.id} reportedUsername={opponent.username} debateId={debateId} />
             )}
-
-            {/* Skip / Next opponent */}
-            {isActive && (
-              <button
-                onClick={handleSkip}
-                className="px-3 sm:px-4 py-2 rounded-lg bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:bg-orange-600/30 transition-colors text-xs sm:text-sm font-medium"
-                title="Skip to next opponent"
-              >
-                <span className="hidden sm:inline">Skip </span>⏭
-              </button>
-            )}
-
-            {/* End debate / Leave */}
             {isActive ? (
-              <button
-                onClick={handleEndDebate}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 transition-colors"
-                title="End debate"
-              >
-                ✕
-              </button>
+              <button className="ctrl-btn danger" onClick={handleEndDebate} title="End debate">✕</button>
             ) : (
-              <button
-                onClick={handleLeave}
-                className="px-3 sm:px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-xs sm:text-sm font-medium"
-              >
-                Leave
-              </button>
+              <button className="ctrl-btn" onClick={handleLeave} style={{ fontSize: 11, width: "auto", borderRadius: 6, padding: "0 14px", fontWeight: 700 }}>Leave</button>
+            )}
+            {isActive && (
+              <button className="ctrl-btn next-btn" onClick={handleSkip}>⏭ Next</button>
             )}
           </div>
 
-          {/* Right — viewer count (hidden on small mobile) */}
-          <div className="hidden sm:block text-sm text-gray-400">
-            👁️ <span className="text-white">0</span> watching
-          </div>
+          {/* Dev mode indicator */}
+          {devMode && (
+            <div style={{ textAlign: "center", fontSize: 10, color: "#f59e0b", padding: 4, background: "rgba(245,158,11,.08)", borderRadius: 6 }}>
+              ⚡ Dev Mode — LiveKit not connected, video disabled
+            </div>
+          )}
         </div>
+
+        {/* ===== CHAT SIDEBAR ===== */}
+        <DebateChat
+          debateId={debateId}
+          currentUserId={currentUserId}
+          currentUsername={me.username}
+          userAId={userA.id}
+          userAUsername={userA.username}
+          userBUsername={userB.username}
+          isActive={isActive}
+          userAColor={myStanceColor}
+          userBColor={opponentStanceColor}
+          userAElo={userA.elo}
+          userBElo={userB.elo}
+          onReaction={addReaction}
+        />
       </div>
     </div>
   );
