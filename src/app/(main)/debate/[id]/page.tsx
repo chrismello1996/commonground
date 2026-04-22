@@ -38,15 +38,22 @@ export default async function DebatePage({ params }: DebatePageProps) {
   const userA = users?.find((u) => u.id === debate.user_a);
   const userB = users?.find((u) => u.id === debate.user_b);
 
-  // Get stances for this debate category
+  // Get stances — try debate category first, fall back to any stance
   const { data: stances } = await supabase
     .from("user_stances")
-    .select("user_id, stance")
-    .eq("category", debate.category)
+    .select("user_id, category, stance")
     .in("user_id", [debate.user_a, debate.user_b]);
 
-  const stanceA = stances?.find((s) => s.user_id === debate.user_a)?.stance || "unknown";
-  const stanceB = stances?.find((s) => s.user_id === debate.user_b)?.stance || "unknown";
+  const getStance = (userId: string) => {
+    const categoryStance = stances?.find((s) => s.user_id === userId && s.category === debate.category);
+    if (categoryStance) return { stance: categoryStance.stance, stanceCategory: categoryStance.category };
+    const anyStance = stances?.find((s) => s.user_id === userId);
+    if (anyStance) return { stance: anyStance.stance, stanceCategory: anyStance.category };
+    return { stance: "unknown", stanceCategory: debate.category };
+  };
+
+  const stanceDataA = getStance(debate.user_a);
+  const stanceDataB = getStance(debate.user_b);
 
   return (
     <div className="min-h-screen">
@@ -62,7 +69,8 @@ export default async function DebatePage({ params }: DebatePageProps) {
           displayName: userA?.display_name || userA?.username || "Unknown",
           avatarUrl: userA?.avatar_url || null,
           elo: userA?.elo || 1200,
-          stance: stanceA,
+          stance: stanceDataA.stance,
+          stanceCategory: stanceDataA.stanceCategory,
         }}
         userB={{
           id: debate.user_b,
@@ -70,7 +78,8 @@ export default async function DebatePage({ params }: DebatePageProps) {
           displayName: userB?.display_name || userB?.username || "Unknown",
           avatarUrl: userB?.avatar_url || null,
           elo: userB?.elo || 1200,
-          stance: stanceB,
+          stance: stanceDataB.stance,
+          stanceCategory: stanceDataB.stanceCategory,
         }}
       />
     </div>

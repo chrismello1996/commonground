@@ -42,6 +42,7 @@ interface DebateUser {
   avatarUrl: string | null;
   elo: number;
   stance: string;
+  stanceCategory?: string;
 }
 
 interface DebateRoomProps {
@@ -121,8 +122,12 @@ export default function DebateRoom({
 
   const categoryConfig = STANCE_OPTIONS[category];
   const categoryLabel = categoryConfig?.label || CATEGORY_TAGS.find((c) => c.id === category)?.label || category;
-  const myStanceData = categoryConfig?.stances.find((s) => s.id === me.stance);
-  const opponentStanceData = categoryConfig?.stances.find((s) => s.id === opponent.stance);
+
+  // Look up stance data — use stanceCategory if the debate category has no stances
+  const myStanceConfig = STANCE_OPTIONS[me.stanceCategory || category];
+  const opponentStanceConfig = STANCE_OPTIONS[opponent.stanceCategory || category];
+  const myStanceData = myStanceConfig?.stances.find((s) => s.id === me.stance);
+  const opponentStanceData = opponentStanceConfig?.stances.find((s) => s.id === opponent.stance);
   const myStanceLabel = myStanceData?.label || me.stance;
   const opponentStanceLabel = opponentStanceData?.label || opponent.stance;
   const myStanceColor = myStanceData?.color || "#10b981";
