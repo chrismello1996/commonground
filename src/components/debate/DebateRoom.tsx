@@ -120,10 +120,12 @@ export default function DebateRoom({
   const opponent = isUserA ? userB : userA;
 
   const categoryConfig = STANCE_OPTIONS[category];
-  const myStanceLabel = categoryConfig?.stances.find((s) => s.id === me.stance)?.label || me.stance;
-  const opponentStanceLabel = categoryConfig?.stances.find((s) => s.id === opponent.stance)?.label || opponent.stance;
-  const myStanceColor = categoryConfig?.stances.find((s) => s.id === me.stance)?.color || "#10b981";
-  const opponentStanceColor = categoryConfig?.stances.find((s) => s.id === opponent.stance)?.color || "#8B4513";
+  const myStanceData = categoryConfig?.stances.find((s) => s.id === me.stance);
+  const opponentStanceData = categoryConfig?.stances.find((s) => s.id === opponent.stance);
+  const myStanceLabel = myStanceData?.label || me.stance;
+  const opponentStanceLabel = opponentStanceData?.label || opponent.stance;
+  const myStanceColor = myStanceData?.color || "#10b981";
+  const opponentStanceColor = opponentStanceData?.color || "#8B4513";
 
   // Debate timer
   useEffect(() => {
@@ -359,9 +361,9 @@ export default function DebateRoom({
     setPendingProposal(null);
   };
 
-  // Determine if stance labels are real (not "unknown" or the raw stance ID)
-  const hasMyStance = myStanceLabel !== "unknown" && myStanceLabel !== me.stance;
-  const hasOpponentStance = opponentStanceLabel !== "unknown" && opponentStanceLabel !== opponent.stance;
+  // Show stance if user has one set (not "unknown")
+  const hasMyStance = me.stance !== "unknown" && me.stance !== "";
+  const hasOpponentStance = opponent.stance !== "unknown" && opponent.stance !== "";
 
   return (
     <div className="debate-room-wrapper">
