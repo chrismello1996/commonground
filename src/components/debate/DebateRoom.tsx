@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from "livekit-client";
-import { STANCE_OPTIONS } from "@/utils/constants";
+import { STANCE_OPTIONS, CATEGORY_TAGS } from "@/utils/constants";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
@@ -120,6 +120,7 @@ export default function DebateRoom({
   const opponent = isUserA ? userB : userA;
 
   const categoryConfig = STANCE_OPTIONS[category];
+  const categoryLabel = categoryConfig?.label || CATEGORY_TAGS.find((c) => c.id === category)?.label || category;
   const myStanceData = categoryConfig?.stances.find((s) => s.id === me.stance);
   const opponentStanceData = categoryConfig?.stances.find((s) => s.id === opponent.stance);
   const myStanceLabel = myStanceData?.label || me.stance;
@@ -391,9 +392,7 @@ export default function DebateRoom({
               </Link>
               {/* Category + Stance tags */}
               <div className="tag-stack">
-                {categoryConfig && (
-                  <div className="category-tag">{categoryConfig.label}</div>
-                )}
+                <div className="category-tag">{categoryLabel}</div>
                 {hasMyStance && (
                   <div className="stance-tag" style={{ background: myStanceColor }}>
                     {myStanceLabel}
@@ -425,9 +424,7 @@ export default function DebateRoom({
               </Link>
               {/* Category + Stance tags */}
               <div className="tag-stack">
-                {categoryConfig && (
-                  <div className="category-tag">{categoryConfig.label}</div>
-                )}
+                <div className="category-tag">{categoryLabel}</div>
                 {hasOpponentStance && (
                   <div className="stance-tag" style={{ background: opponentStanceColor }}>
                     {opponentStanceLabel}
@@ -501,9 +498,7 @@ export default function DebateRoom({
             <div className="topic-banner">
               <span className="topic-label">Topic</span>
               <span className="topic-text">{debateTopic}</span>
-              {categoryConfig && (
-                <span className="category-pill">{categoryConfig.label}</span>
-              )}
+              <span className="category-pill">{categoryLabel}</span>
             </div>
 
             {/* Pending proposal notification */}
