@@ -39,14 +39,6 @@ export const metadata: Metadata = {
       "Pick your stance. Get matched with your opposite. Settle it on camera.",
     images: ["/og-image.png"],
   },
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },
-    ],
-    apple: "/apple-touch-icon.png",
-  },
   robots: {
     index: true,
     follow: true,
