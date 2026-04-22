@@ -390,15 +390,12 @@ export default function DebateRoom({
                 {me.username}
                 <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
               </Link>
-              {/* Category + Stance tags */}
-              <div className="tag-stack">
-                <div className="category-tag">{categoryLabel}</div>
-                {hasMyStance && (
-                  <div className="stance-tag" style={{ background: myStanceColor }}>
-                    {myStanceLabel}
-                  </div>
-                )}
-              </div>
+              {/* Stance tag */}
+              {hasMyStance && (
+                <div className="stance-tag" style={{ background: myStanceColor }}>
+                  {myStanceLabel}
+                </div>
+              )}
               <div className="uptime-badge">{formatTime(debateTime)}</div>
               <div className="reaction-overlay">
                 {floatingReactions.map((r) => (
@@ -422,15 +419,12 @@ export default function DebateRoom({
                 {opponent.username}
                 <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
               </Link>
-              {/* Category + Stance tags */}
-              <div className="tag-stack">
-                <div className="category-tag">{categoryLabel}</div>
-                {hasOpponentStance && (
-                  <div className="stance-tag" style={{ background: opponentStanceColor }}>
-                    {opponentStanceLabel}
-                  </div>
-                )}
-              </div>
+              {/* Stance tag */}
+              {hasOpponentStance && (
+                <div className="stance-tag" style={{ background: opponentStanceColor }}>
+                  {opponentStanceLabel}
+                </div>
+              )}
 
               {/* Fact check overlay */}
               {factChecks.length > 0 && (
