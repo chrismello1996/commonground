@@ -385,17 +385,19 @@ export default function DebateRoom({
               )}
               <div className="live-pill"><span className="live-pill-dot" />LIVE</div>
               <div className="viewer-count-badge">{debateViewers}</div>
-              <Link href={`/profile/${me.username}`} className="video-label video-label-link">
-                <span className="video-label-dot" style={{ background: "var(--green)" }} />
-                {me.username}
-                <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
-              </Link>
-              {/* Stance tag */}
-              {hasMyStance && (
-                <div className="stance-tag" style={{ background: myStanceColor }}>
-                  {myStanceLabel}
-                </div>
-              )}
+              <div className="video-label-row">
+                <Link href={`/profile/${me.username}`} className="video-label video-label-link">
+                  <span className="video-label-dot" style={{ background: "var(--green)" }} />
+                  {me.username}
+                  <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
+                </Link>
+                {hasMyStance && (
+                  <div className="stance-badge" style={{ borderColor: myStanceColor }}>
+                    <span className="stance-badge-dot" style={{ background: myStanceColor }} />
+                    {myStanceLabel}
+                  </div>
+                )}
+              </div>
               <div className="uptime-badge">{formatTime(debateTime)}</div>
               <div className="reaction-overlay">
                 {floatingReactions.map((r) => (
@@ -414,17 +416,19 @@ export default function DebateRoom({
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{opponent.username}</span>
                 </div>
               )}
-              <Link href={`/profile/${opponent.username}`} className="video-label video-label-link">
-                <span className="video-label-dot" style={{ background: "var(--red)" }} />
-                {opponent.username}
-                <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
-              </Link>
-              {/* Stance tag */}
-              {hasOpponentStance && (
-                <div className="stance-tag" style={{ background: opponentStanceColor }}>
-                  {opponentStanceLabel}
-                </div>
-              )}
+              <div className="video-label-row">
+                <Link href={`/profile/${opponent.username}`} className="video-label video-label-link">
+                  <span className="video-label-dot" style={{ background: "var(--red)" }} />
+                  {opponent.username}
+                  <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
+                </Link>
+                {hasOpponentStance && (
+                  <div className="stance-badge" style={{ borderColor: opponentStanceColor }}>
+                    <span className="stance-badge-dot" style={{ background: opponentStanceColor }} />
+                    {opponentStanceLabel}
+                  </div>
+                )}
+              </div>
 
               {/* Fact check overlay */}
               {factChecks.length > 0 && (
