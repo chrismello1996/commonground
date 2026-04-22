@@ -465,6 +465,86 @@
 
 /* topic-propose-btn and topic-shuffle-btn removed */
 
+/* Vote count row */
+.vote-count-row {
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 2px 0 0;
+}
+
+/* Topic proposal alert (opponent proposed) */
+.topic-proposal-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 6px;
+}
+
+.proposal-text {
+  flex: 1;
+  font-size: 11px;
+  color: var(--txt);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proposal-accept-btn {
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.proposal-accept-btn:hover {
+  background: #059669;
+}
+
+.proposal-decline-btn {
+  padding: 5px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--txt2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.proposal-decline-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--red);
+}
+
+/* Topic proposal pending (waiting for opponent) */
+.topic-proposal-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px dashed rgba(251, 191, 36, 0.3);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--txt2);
+}
+
 /* ===== CONTROLS BAR ===== */
 .controls-bar {
   display: flex;

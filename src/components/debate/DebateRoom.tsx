@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from "livekit-client";
 import { STANCE_OPTIONS } from "@/utils/constants";
 import DebateChat from "./DebateChat";
@@ -97,6 +98,7 @@ export default function DebateRoom({
   const [debateViewers, setDebateViewers] = useState(Math.floor(Math.random() * 50) + 10);
   const [debateTopic, setDebateTopic] = useState(topic);
   const [proposedTopic, setProposedTopic] = useState("");
+  const [pendingProposal, setPendingProposal] = useState<{ topic: string; proposedBy: string } | null>(null);
   const [myVote, setMyVote] = useState<"A" | "B" | null>(null);
   const [debateVotesA, setDebateVotesA] = useState(50);
   const [debateVotesB, setDebateVotesB] = useState(50);
@@ -289,6 +291,29 @@ export default function DebateRoom({
     }
   }, [remoteVideoTrack]);
 
+  const handleProposeTopic = () => {
+    if (!proposedTopic.trim()) return;
+    setPendingProposal({ topic: proposedTopic.trim(), proposedBy: currentUserId });
+    setProposedTopic("");
+  };
+
+  const handleAcceptProposal = () => {
+    if (pendingProposal) {
+      setDebateTopic(pendingProposal.topic);
+      setPendingProposal(null);
+    }
+  };
+
+  const handleDeclineProposal = () => {
+    setPendingProposal(null);
+  };
+
+  // Determine if stance labels are real (not "unknown" or the raw stance ID)
+  const hasMyStance = myStanceLabel !== "unknown" && myStanceLabel !== me.stance;
+  const hasOpponentStance = opponentStanceLabel !== "unknown" && opponentStanceLabel !== opponent.stance;
+
+  const totalVotes = debateVotesA + debateVotesB;
+
   return (
     <div className="debate-room-wrapper">
       <div className="debate-room">
@@ -308,15 +333,23 @@ export default function DebateRoom({
               )}
               <div className="live-pill"><span className="live-pill-dot" />LIVE</div>
               <div className="viewer-count-badge">{debateViewers}</div>
-              <div className="video-label">
+              <Link href={`/profile/${me.id}`} className="video-label video-label-link">
                 <span className="video-label-dot" style={{ background: "var(--green)" }} />
                 {me.username}
                 <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
-              </div>
-              {/* Tag / Stance badge */}
-              <div className="stance-tag" style={{ background: myStanceColor }}>
-                {myStanceLabel}
-              </div>
+              </Link>
+              {/* Stance badge — only show if stance is set */}
+              {hasMyStance && (
+                <div className="stance-tag" style={{ background: myStanceColor }}>
+                  {myStanceLabel}
+                </div>
+              )}
+              {/* Category tag — always show */}
+              {categoryConfig && !hasMyStance && (
+                <div className="stance-tag" style={{ background: "var(--accent)" }}>
+                  {categoryConfig.label}
+                </div>
+              )}
               <div className="uptime-badge">{formatTime(debateTime)}</div>
               <div className="reaction-overlay">
                 {floatingReactions.map((r) => (
@@ -335,15 +368,22 @@ export default function DebateRoom({
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{opponent.username}</span>
                 </div>
               )}
-              <div className="video-label">
+              <Link href={`/profile/${opponent.id}`} className="video-label video-label-link">
                 <span className="video-label-dot" style={{ background: "var(--red)" }} />
                 {opponent.username}
                 <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
-              </div>
-              {/* Tag / Stance badge */}
-              <div className="stance-tag" style={{ background: opponentStanceColor }}>
-                {opponentStanceLabel}
-              </div>
+              </Link>
+              {/* Stance badge — only show if stance is set */}
+              {hasOpponentStance && (
+                <div className="stance-tag" style={{ background: opponentStanceColor }}>
+                  {opponentStanceLabel}
+                </div>
+              )}
+              {categoryConfig && !hasOpponentStance && (
+                <div className="stance-tag" style={{ background: "var(--gold)" }}>
+                  {categoryConfig.label}
+                </div>
+              )}
 
               {/* Fact check overlay */}
               {factChecks.length > 0 && (
@@ -389,7 +429,7 @@ export default function DebateRoom({
             </div>
           )}
 
-          {/* Audience vote bar */}
+          {/* Audience vote bar with vote counts */}
           <div className="vote-section" style={{ marginTop: 4 }}>
             <div className="vote-pct left">{normA}%</div>
             <button className={`vote-btn left ${myVote === "A" ? "voted" : ""}`} onClick={() => setMyVote("A")}>{me.username}</button>
@@ -400,8 +440,11 @@ export default function DebateRoom({
             <button className={`vote-btn right ${myVote === "B" ? "voted" : ""}`} onClick={() => setMyVote("B")}>{opponent.username}</button>
             <div className="vote-pct right">{normB}%</div>
           </div>
+          <div className="vote-count-row">
+            <span>{totalVotes} vote{totalVotes !== 1 ? "s" : ""}</span>
+          </div>
 
-          {/* Topic banner with inline propose */}
+          {/* Topic banner with propose/accept */}
           <div className="topic-banner-wrap">
             <div className="topic-banner">
               <span className="topic-label">Topic</span>
@@ -410,30 +453,37 @@ export default function DebateRoom({
                 <span className="category-pill">{categoryConfig.label}</span>
               )}
             </div>
-            <div className="topic-propose-row">
-              <input
-                className="topic-propose-input"
-                placeholder="Propose a topic..."
-                value={proposedTopic}
-                onChange={(e) => setProposedTopic(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && proposedTopic.trim()) {
-                    setDebateTopic(proposedTopic.trim());
-                    setProposedTopic("");
-                  }
-                }}
-              />
-              <button
-                className="topic-set-btn"
-                onClick={() => {
-                  if (!proposedTopic.trim()) return;
-                  setDebateTopic(proposedTopic.trim());
-                  setProposedTopic("");
-                }}
-              >
-                Set Topic
-              </button>
-            </div>
+
+            {/* Pending proposal notification */}
+            {pendingProposal && pendingProposal.proposedBy !== currentUserId ? (
+              <div className="topic-proposal-alert">
+                <span className="proposal-text">
+                  {opponent.username} proposes: <strong>&quot;{pendingProposal.topic}&quot;</strong>
+                </span>
+                <button className="proposal-accept-btn" onClick={handleAcceptProposal}>Accept</button>
+                <button className="proposal-decline-btn" onClick={handleDeclineProposal}>Decline</button>
+              </div>
+            ) : pendingProposal && pendingProposal.proposedBy === currentUserId ? (
+              <div className="topic-proposal-pending">
+                <span>Waiting for {opponent.username} to accept: &quot;{pendingProposal.topic}&quot;</span>
+                <button className="proposal-decline-btn" onClick={handleDeclineProposal}>Cancel</button>
+              </div>
+            ) : (
+              <div className="topic-propose-row">
+                <input
+                  className="topic-propose-input"
+                  placeholder="Propose a topic..."
+                  value={proposedTopic}
+                  onChange={(e) => setProposedTopic(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleProposeTopic();
+                  }}
+                />
+                <button className="topic-set-btn" onClick={handleProposeTopic}>
+                  Propose
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Controls bar — sleek, no emoji */}
