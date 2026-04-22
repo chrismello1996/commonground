@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { STANCE_OPTIONS } from "@/utils/constants";
+import { STANCE_OPTIONS, CATEGORY_TAGS } from "@/utils/constants";
+import TrendingTopics from "@/components/browse/TrendingTopics";
 
 export const revalidate = 10; // refresh every 10 seconds
 
@@ -62,6 +63,42 @@ export default async function BrowsePage() {
       else voteCounts[v.debate_id].b++;
     }
   });
+
+  // Fetch all debates for topic popularity (all time)
+  const { data: allDebates } = await supabase
+    .from("debates")
+    .select("topic, category")
+    .in("status", ["active", "completed"]);
+
+  // Fetch recent debates for trending (last 7 days)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentDebates } = await supabase
+    .from("debates")
+    .select("topic, category")
+    .in("status", ["active", "completed"])
+    .gte("created_at", sevenDaysAgo);
+
+  const getCategoryLabel = (catId: string) =>
+    CATEGORY_TAGS.find((c) => c.id === catId)?.label || catId;
+
+  // Aggregate topic counts
+  const aggregateTopics = (rows: { topic: string; category: string }[] | null) => {
+    const map = new Map<string, { topic: string; category: string; count: number }>();
+    rows?.forEach((r) => {
+      const key = r.topic.toLowerCase().trim();
+      if (!map.has(key)) {
+        map.set(key, { topic: r.topic, category: r.category, count: 0 });
+      }
+      map.get(key)!.count++;
+    });
+    return Array.from(map.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((t) => ({ ...t, categoryLabel: getCategoryLabel(t.category) }));
+  };
+
+  const trendingTopics = aggregateTopics(recentDebates);
+  const allTimeTopics = aggregateTopics(allDebates);
 
   const getUser = (id: string) => users?.find((u) => u.id === id);
   const getStance = (userId: string, category: string) =>
@@ -178,6 +215,9 @@ export default async function BrowsePage() {
           </div>
         )}
       </div>
+
+      {/* Trending Topics Sidebar */}
+      <TrendingTopics trending={trendingTopics} allTime={allTimeTopics} />
     </div>
   );
 }
