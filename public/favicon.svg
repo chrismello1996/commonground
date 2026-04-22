@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 140 120" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" fill="none">
   <defs>
-    <clipPath id="fGreen"><rect x="8" y="12" width="72" height="56" rx="16"/></clipPath>
+    <clipPath id="fGreen"><rect x="8" y="22" width="72" height="56" rx="16"/></clipPath>
   </defs>
-  <rect x="8" y="12" width="72" height="56" rx="16" fill="#10b981"/>
-  <polygon points="28,68 40,68 24,84" fill="#10b981"/>
-  <rect x="52" y="24" width="72" height="56" rx="16" fill="#8B4513"/>
-  <polygon points="104,80 92,80 108,96" fill="#8B4513"/>
-  <rect x="52" y="24" width="72" height="56" rx="16" fill="#e5e7eb" clip-path="url(#fGreen)"/>
+  <rect x="8" y="22" width="72" height="56" rx="16" fill="#10b981"/>
+  <polygon points="28,78 40,78 24,94" fill="#10b981"/>
+  <rect x="52" y="34" width="72" height="56" rx="16" fill="#8B4513"/>
+  <polygon points="104,90 92,90 108,106" fill="#8B4513"/>
+  <rect x="52" y="34" width="72" height="56" rx="16" fill="#e5e7eb" clip-path="url(#fGreen)"/>
 </svg>
