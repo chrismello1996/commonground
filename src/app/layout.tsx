@@ -54,6 +54,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="theme-color" content="#ffffff" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#10b981" />
       </head>
       <body className="antialiased bg-white text-gray-900 min-h-screen">
         {children}
