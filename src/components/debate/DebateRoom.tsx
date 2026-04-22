@@ -441,7 +441,9 @@ export default function DebateRoom({
             <div className="vote-pct right">{normB}%</div>
           </div>
           <div className="vote-count-row">
+            <span className="vote-count-left">{debateVotesA}</span>
             <span>{totalVotes} vote{totalVotes !== 1 ? "s" : ""}</span>
+            <span className="vote-count-right">{debateVotesB}</span>
           </div>
 
           {/* Topic banner with propose/accept */}

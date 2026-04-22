@@ -467,11 +467,23 @@
 
 /* Vote count row */
 .vote-count-row {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 10px;
   color: var(--muted);
   font-weight: 600;
   padding: 2px 0 0;
+}
+
+.vote-count-left {
+  color: var(--accent-l);
+  font-weight: 800;
+}
+
+.vote-count-right {
+  color: #8B4513;
+  font-weight: 800;
 }
 
 /* Topic proposal alert (opponent proposed) */
