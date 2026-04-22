@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from "livekit-client";
-import { STANCE_OPTIONS, CATEGORY_TAGS } from "@/utils/constants";
+import { STANCE_OPTIONS } from "@/utils/constants";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
@@ -98,7 +98,7 @@ export default function DebateRoom({
 
   // Debate features
   const [debateViewers, setDebateViewers] = useState(Math.floor(Math.random() * 50) + 10);
-  const [debateTopic, setDebateTopic] = useState(topic);
+  const [debateTopic, setDebateTopic] = useState(topic || "");
   const [proposedTopic, setProposedTopic] = useState("");
   const [pendingProposal, setPendingProposal] = useState<{ topic: string; proposedBy: string } | null>(null);
   const [myVote, setMyVote] = useState<"A" | "B" | null>(null);
@@ -119,9 +119,6 @@ export default function DebateRoom({
   const isUserA = currentUserId === userA.id;
   const me = isUserA ? userA : userB;
   const opponent = isUserA ? userB : userA;
-
-  const categoryConfig = STANCE_OPTIONS[category];
-  const categoryLabel = categoryConfig?.label || CATEGORY_TAGS.find((c) => c.id === category)?.label || category;
 
   // Look up stance data — use stanceCategory if the debate category has no stances
   const myStanceConfig = STANCE_OPTIONS[me.stanceCategory || category];
@@ -346,15 +343,22 @@ export default function DebateRoom({
     });
   };
 
-  const handleAcceptProposal = () => {
+  const handleAcceptProposal = async () => {
     if (pendingProposal) {
-      setDebateTopic(pendingProposal.topic);
+      const acceptedTopic = pendingProposal.topic;
+      setDebateTopic(acceptedTopic);
       topicChannelRef.current?.send({
         type: "broadcast",
         event: "topic-accept",
-        payload: { topic: pendingProposal.topic },
+        payload: { topic: acceptedTopic },
       });
       setPendingProposal(null);
+
+      // Save to Supabase so viewers/browse can see the topic
+      await supabaseRef.current
+        .from("debates")
+        .update({ topic: acceptedTopic })
+        .eq("id", debateId);
     }
   };
 
@@ -498,11 +502,17 @@ export default function DebateRoom({
 
           {/* Topic banner with propose/accept */}
           <div className="topic-banner-wrap">
-            <div className="topic-banner">
-              <span className="topic-label">Topic</span>
-              <span className="topic-text">{debateTopic}</span>
-              <span className="category-pill">{categoryLabel}</span>
-            </div>
+            {debateTopic ? (
+              <div className="topic-banner">
+                <span className="topic-label">Topic</span>
+                <span className="topic-text">{debateTopic}</span>
+              </div>
+            ) : (
+              <div className="topic-banner">
+                <span className="topic-label">No topic set</span>
+                <span className="topic-text" style={{ color: "var(--muted)", fontStyle: "italic" }}>Propose a topic below</span>
+              </div>
+            )}
 
             {/* Pending proposal notification */}
             {pendingProposal && pendingProposal.proposedBy !== currentUserId ? (

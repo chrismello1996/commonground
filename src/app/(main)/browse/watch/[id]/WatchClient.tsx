@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { STANCE_OPTIONS } from "@/utils/constants";
+import { createClient } from "@/lib/supabase/client";
 import DebateChat from "@/components/debate/DebateChat";
 
 interface WatchClientProps {
@@ -51,9 +52,11 @@ export default function WatchClient({
   const [votedFor, setVotedFor] = useState<"A" | "B" | null>(initialUserVote);
   const [votesA, setVotesA] = useState(initialVotesA);
   const [votesB, setVotesB] = useState(initialVotesB);
+  const [currentTopic, setCurrentTopic] = useState(debate.topic);
   const [elapsed, setElapsed] = useState(
     Math.floor((Date.now() - new Date(debate.createdAt).getTime()) / 1000)
   );
+  const supabaseRef = useRef(createClient());
 
   const categoryConfig = STANCE_OPTIONS[debate.category];
   const stanceLabelA = categoryConfig?.stances.find((s) => s.id === userA.stance)?.label || userA.stance;
@@ -64,6 +67,25 @@ export default function WatchClient({
     const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(timer);
   }, [debate.status]);
+
+  // Listen for topic changes in real time
+  useEffect(() => {
+    const supabase = supabaseRef.current;
+    const channel = supabase
+      .channel(`watch-topic-${debate.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "debates", filter: `id=eq.${debate.id}` },
+        (payload) => {
+          if (payload.new.topic) {
+            setCurrentTopic(payload.new.topic);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [debate.id]);
 
   const handleVote = async (side: "A" | "B") => {
     if (votedFor || !currentUserId) return;
@@ -106,7 +128,7 @@ export default function WatchClient({
             </svg>
           </Link>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold truncate">{debate.topic}</p>
+            <p className="text-sm font-bold truncate">{currentTopic || "No topic set yet"}</p>
             <p className="text-[11px] text-gray-500">
               {categoryConfig?.label || debate.category}
               {stanceLabelA !== "unknown" && stanceLabelB !== "unknown" && (
