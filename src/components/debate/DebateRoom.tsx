@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from "livekit-client";
 import { STANCE_OPTIONS } from "@/utils/constants";
+import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
 import "@/styles/debate-room.css";
@@ -295,20 +296,66 @@ export default function DebateRoom({
     }
   }, [remoteVideoTrack]);
 
+  // Supabase Realtime channel for topic proposals
+  const supabaseRef = useRef(createClient());
+  const topicChannelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
+
+  useEffect(() => {
+    const supabase = supabaseRef.current;
+    const channel = supabase.channel(`debate-topic-${debateId}`);
+
+    channel
+      .on("broadcast", { event: "topic-propose" }, ({ payload }) => {
+        if (payload.proposedBy !== currentUserId) {
+          setPendingProposal({ topic: payload.topic, proposedBy: payload.proposedBy });
+        }
+      })
+      .on("broadcast", { event: "topic-accept" }, ({ payload }) => {
+        setDebateTopic(payload.topic);
+        setPendingProposal(null);
+      })
+      .on("broadcast", { event: "topic-decline" }, () => {
+        setPendingProposal(null);
+      })
+      .subscribe();
+
+    topicChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [debateId, currentUserId]);
+
   const handleProposeTopic = () => {
     if (!proposedTopic.trim()) return;
-    setPendingProposal({ topic: proposedTopic.trim(), proposedBy: currentUserId });
+    const proposal = { topic: proposedTopic.trim(), proposedBy: currentUserId };
+    setPendingProposal(proposal);
     setProposedTopic("");
+    topicChannelRef.current?.send({
+      type: "broadcast",
+      event: "topic-propose",
+      payload: proposal,
+    });
   };
 
   const handleAcceptProposal = () => {
     if (pendingProposal) {
       setDebateTopic(pendingProposal.topic);
+      topicChannelRef.current?.send({
+        type: "broadcast",
+        event: "topic-accept",
+        payload: { topic: pendingProposal.topic },
+      });
       setPendingProposal(null);
     }
   };
 
   const handleDeclineProposal = () => {
+    topicChannelRef.current?.send({
+      type: "broadcast",
+      event: "topic-decline",
+      payload: {},
+    });
     setPendingProposal(null);
   };
 
