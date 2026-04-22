@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const EMOTES = ["🔥", "💀", "🫡", "💯", "🤡", "👑", "⚡", "🧠"];
@@ -167,7 +168,7 @@ export default function DebateChat({
             return (
               <div key={msg.id} className="twitch-msg">
                 <span className="elo-tag" style={{ background: eloStyle.bg, color: eloStyle.color }}>{elo}</span>
-                <span className="username" style={{ color }}>{username}</span>
+                <Link href={`/profile/${username}`} className="username" style={{ color }}>{username}</Link>
                 <span style={{ color: "var(--txt2)" }}>: </span>
                 <span style={{ fontSize: 18 }}>{msg.content}</span>
               </div>
@@ -177,7 +178,7 @@ export default function DebateChat({
           return (
             <div key={msg.id} className="twitch-msg">
               <span className="elo-tag" style={{ background: eloStyle.bg, color: eloStyle.color }}>{elo}</span>
-              <span className="username" style={{ color }}>{username}</span>
+              <Link href={`/profile/${username}`} className="username" style={{ color }}>{username}</Link>
               <span style={{ color: "var(--txt2)" }}>: </span>
               <span>{msg.content}</span>
             </div>

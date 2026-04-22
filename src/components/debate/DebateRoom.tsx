@@ -382,7 +382,7 @@ export default function DebateRoom({
               )}
               <div className="live-pill"><span className="live-pill-dot" />LIVE</div>
               <div className="viewer-count-badge">{debateViewers}</div>
-              <Link href={`/profile/${me.id}`} className="video-label video-label-link">
+              <Link href={`/profile/${me.username}`} className="video-label video-label-link">
                 <span className="video-label-dot" style={{ background: "var(--green)" }} />
                 {me.username}
                 <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
@@ -417,7 +417,7 @@ export default function DebateRoom({
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{opponent.username}</span>
                 </div>
               )}
-              <Link href={`/profile/${opponent.id}`} className="video-label video-label-link">
+              <Link href={`/profile/${opponent.username}`} className="video-label video-label-link">
                 <span className="video-label-dot" style={{ background: "var(--red)" }} />
                 {opponent.username}
                 <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>

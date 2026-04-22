@@ -139,12 +139,12 @@ export default function WatchClient({
               >
                 {userA.username[0].toUpperCase()}
               </div>
-              <span className="text-sm font-bold text-gray-700">{userA.username}</span>
+              <Link href={`/profile/${userA.username}`} className="text-sm font-bold text-gray-700 hover:underline hover:text-emerald-600 transition">{userA.username}</Link>
             </div>
-            <div className="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-md">
+            <Link href={`/profile/${userA.username}`} className="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-md hover:bg-black/80 transition">
               <p className="text-xs font-bold">{userA.username}</p>
               <p className={`text-[10px] font-semibold ${getEloRank(userA.elo)}`}>{userA.elo} ELO</p>
-            </div>
+            </Link>
             {stanceLabelA !== "unknown" && (
               <div
                 className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
@@ -167,12 +167,12 @@ export default function WatchClient({
               >
                 {userB.username[0].toUpperCase()}
               </div>
-              <span className="text-sm font-bold text-gray-700">{userB.username}</span>
+              <Link href={`/profile/${userB.username}`} className="text-sm font-bold text-gray-700 hover:underline hover:text-emerald-600 transition">{userB.username}</Link>
             </div>
-            <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2.5 py-1 rounded-md text-right">
+            <Link href={`/profile/${userB.username}`} className="absolute bottom-3 right-3 bg-black/70 text-white px-2.5 py-1 rounded-md text-right hover:bg-black/80 transition">
               <p className="text-xs font-bold">{userB.username}</p>
               <p className={`text-[10px] font-semibold ${getEloRank(userB.elo)}`}>{userB.elo} ELO</p>
-            </div>
+            </Link>
             {stanceLabelB !== "unknown" && (
               <div
                 className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
