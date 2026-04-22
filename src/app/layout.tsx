@@ -39,6 +39,12 @@ export const metadata: Metadata = {
       "Pick your stance. Get matched with your opposite. Settle it on camera.",
     images: ["/og-image.png"],
   },
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+  },
   robots: {
     index: true,
     follow: true,
@@ -54,8 +60,6 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="theme-color" content="#ffffff" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
       </head>
       <body className="antialiased bg-white text-gray-900 min-h-screen">
         {children}
