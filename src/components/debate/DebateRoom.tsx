@@ -100,8 +100,8 @@ export default function DebateRoom({
   const [proposedTopic, setProposedTopic] = useState("");
   const [pendingProposal, setPendingProposal] = useState<{ topic: string; proposedBy: string } | null>(null);
   const [myVote, setMyVote] = useState<"A" | "B" | null>(null);
-  const [debateVotesA, setDebateVotesA] = useState(50);
-  const [debateVotesB, setDebateVotesB] = useState(50);
+  const [debateVotesA, setDebateVotesA] = useState(0);
+  const [debateVotesB, setDebateVotesB] = useState(0);
 
   // Fact check
   const [factChecks, setFactChecks] = useState<FactCheck[]>([]);
@@ -144,14 +144,17 @@ export default function DebateRoom({
   }, [isActive]);
 
   // Simulate vote changes
-  useEffect(() => {
-    if (!isActive) return;
-    const interval = setInterval(() => {
-      setDebateVotesA((v) => Math.max(10, Math.min(90, v + Math.floor(Math.random() * 6) - 3)));
-      setDebateVotesB((v) => Math.max(10, Math.min(90, v + Math.floor(Math.random() * 6) - 3)));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isActive]);
+  const handleVote = (side: "A" | "B") => {
+    if (myVote === side) return; // already voted this side
+    if (myVote) {
+      // switching vote — remove from old side, add to new
+      if (myVote === "A") setDebateVotesA((v) => Math.max(0, v - 1));
+      else setDebateVotesB((v) => Math.max(0, v - 1));
+    }
+    if (side === "A") setDebateVotesA((v) => v + 1);
+    else setDebateVotesB((v) => v + 1);
+    setMyVote(side);
+  };
 
   // Connect to LiveKit
   useEffect(() => {
@@ -269,8 +272,9 @@ export default function DebateRoom({
   };
 
   // Vote percentages
-  const normA = Math.round((debateVotesA / (debateVotesA + debateVotesB)) * 100);
-  const normB = 100 - normA;
+  const totalVotes = debateVotesA + debateVotesB;
+  const normA = totalVotes > 0 ? Math.round((debateVotesA / totalVotes) * 100) : 50;
+  const normB = totalVotes > 0 ? 100 - normA : 50;
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -311,8 +315,6 @@ export default function DebateRoom({
   // Determine if stance labels are real (not "unknown" or the raw stance ID)
   const hasMyStance = myStanceLabel !== "unknown" && myStanceLabel !== me.stance;
   const hasOpponentStance = opponentStanceLabel !== "unknown" && opponentStanceLabel !== opponent.stance;
-
-  const totalVotes = debateVotesA + debateVotesB;
 
   return (
     <div className="debate-room-wrapper">
@@ -432,12 +434,12 @@ export default function DebateRoom({
           {/* Audience vote bar with vote counts */}
           <div className="vote-section" style={{ marginTop: 4 }}>
             <div className="vote-pct left">{normA}%</div>
-            <button className={`vote-btn left ${myVote === "A" ? "voted" : ""}`} onClick={() => setMyVote("A")}>{me.username}</button>
+            <button className={`vote-btn left ${myVote === "A" ? "voted" : ""}`} onClick={() => handleVote("A")}>{me.username}</button>
             <div className="vote-bar-lg" style={{ flex: 1 }}>
               <div className="vote-bar-left" style={{ width: `${normA}%` }} />
               <div className="vote-bar-right" />
             </div>
-            <button className={`vote-btn right ${myVote === "B" ? "voted" : ""}`} onClick={() => setMyVote("B")}>{opponent.username}</button>
+            <button className={`vote-btn right ${myVote === "B" ? "voted" : ""}`} onClick={() => handleVote("B")}>{opponent.username}</button>
             <div className="vote-pct right">{normB}%</div>
           </div>
           <div className="vote-count-row">
