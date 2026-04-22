@@ -387,18 +387,17 @@ export default function DebateRoom({
                 {me.username}
                 <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
               </Link>
-              {/* Stance badge — only show if stance is set */}
-              {hasMyStance && (
-                <div className="stance-tag" style={{ background: myStanceColor }}>
-                  {myStanceLabel}
-                </div>
-              )}
-              {/* Category tag — always show */}
-              {categoryConfig && !hasMyStance && (
-                <div className="stance-tag" style={{ background: "var(--accent)" }}>
-                  {categoryConfig.label}
-                </div>
-              )}
+              {/* Category + Stance tags */}
+              <div className="tag-stack">
+                {categoryConfig && (
+                  <div className="category-tag">{categoryConfig.label}</div>
+                )}
+                {hasMyStance && (
+                  <div className="stance-tag" style={{ background: myStanceColor }}>
+                    {myStanceLabel}
+                  </div>
+                )}
+              </div>
               <div className="uptime-badge">{formatTime(debateTime)}</div>
               <div className="reaction-overlay">
                 {floatingReactions.map((r) => (
@@ -422,17 +421,17 @@ export default function DebateRoom({
                 {opponent.username}
                 <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
               </Link>
-              {/* Stance badge — only show if stance is set */}
-              {hasOpponentStance && (
-                <div className="stance-tag" style={{ background: opponentStanceColor }}>
-                  {opponentStanceLabel}
-                </div>
-              )}
-              {categoryConfig && !hasOpponentStance && (
-                <div className="stance-tag" style={{ background: "var(--gold)" }}>
-                  {categoryConfig.label}
-                </div>
-              )}
+              {/* Category + Stance tags */}
+              <div className="tag-stack">
+                {categoryConfig && (
+                  <div className="category-tag">{categoryConfig.label}</div>
+                )}
+                {hasOpponentStance && (
+                  <div className="stance-tag" style={{ background: opponentStanceColor }}>
+                    {opponentStanceLabel}
+                  </div>
+                )}
+              </div>
 
               {/* Fact check overlay */}
               {factChecks.length > 0 && (

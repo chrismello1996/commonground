@@ -167,10 +167,6 @@
 
 /* Stance tag on video panel */
 .stance-tag {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
   padding: 2px 10px;
   border-radius: 4px;
   font-size: 10px;
@@ -178,6 +174,30 @@
   color: #fff;
   letter-spacing: 0.3px;
   white-space: nowrap;
+}
+
+/* Tag stack — category + stance together */
+.tag-stack {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  z-index: 5;
+}
+
+.category-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+  letter-spacing: 0.3px;
 }
 
 /* Clickable video label */
