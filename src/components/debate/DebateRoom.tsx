@@ -169,22 +169,51 @@ export default function DebateRoom({
 
     const connect = async () => {
       try {
+        // Step 1: Request browser permissions BEFORE connecting to LiveKit
+        // This ensures the user sees the permission prompt clearly
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          // Stop the test stream immediately — LiveKit will create its own
+          stream.getTracks().forEach((t) => t.stop());
+          console.log("[LiveKit] Camera & mic permissions granted");
+        } catch (permErr) {
+          console.error("[LiveKit] Permission denied:", permErr);
+          // Continue anyway — user can still participate without video
+        }
+
+        // Step 2: Fetch LiveKit token
+        console.log("[LiveKit] Fetching token for debate:", debateId);
         const res = await fetch("/api/livekit/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ debateId }),
         });
         const data = await res.json();
+        console.log("[LiveKit] Token response:", { devMode: data.devMode, hasToken: !!data.token, status: res.status });
+
+        if (!res.ok) {
+          console.error("[LiveKit] Token error:", data.error);
+          setDevMode(true);
+          setConnectionState("dev-mode");
+          return;
+        }
         if (data.devMode) { setDevMode(true); setConnectionState("dev-mode"); return; }
         if (!data.token || cancelled) return;
 
         const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-        if (!livekitUrl) { setDevMode(true); setConnectionState("dev-mode"); return; }
+        if (!livekitUrl) {
+          console.error("[LiveKit] NEXT_PUBLIC_LIVEKIT_URL not set");
+          setDevMode(true);
+          setConnectionState("dev-mode");
+          return;
+        }
 
+        // Step 3: Create room and set up event handlers
         const room = new Room({ adaptiveStream: true, dynacast: true });
         roomRef.current = room;
 
         room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+          console.log("[LiveKit] Track subscribed:", track.kind);
           if (track.kind === Track.Kind.Video) { setRemoteVideoTrack(track); setIsOpponentCamOff(false); }
         });
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
@@ -196,20 +225,37 @@ export default function DebateRoom({
         room.on(RoomEvent.TrackUnmuted, (pub) => {
           if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(false);
         });
-        room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => setConnectionState(state));
+        room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
+          console.log("[LiveKit] Connection state:", state);
+          setConnectionState(state);
+        });
         room.on(RoomEvent.Disconnected, () => setConnectionState("disconnected"));
 
+        // Step 4: Connect to LiveKit server
+        console.log("[LiveKit] Connecting to:", livekitUrl);
         await room.connect(livekitUrl, data.token);
+        console.log("[LiveKit] Connected successfully");
         setConnectionState("connected");
 
+        // Step 5: Enable camera and microphone
         if (!cancelled) {
-          await room.localParticipant.enableCameraAndMicrophone();
+          try {
+            await room.localParticipant.enableCameraAndMicrophone();
+            console.log("[LiveKit] Camera & mic enabled");
+          } catch (mediaErr) {
+            console.warn("[LiveKit] Could not enable camera/mic:", mediaErr);
+            // Try enabling them separately
+            try { await room.localParticipant.setCameraEnabled(true); } catch { console.warn("[LiveKit] Camera failed"); }
+            try { await room.localParticipant.setMicrophoneEnabled(true); } catch { console.warn("[LiveKit] Mic failed"); }
+          }
           const vt = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
           const at = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalTrack | undefined;
+          console.log("[LiveKit] Local tracks — video:", !!vt, "audio:", !!at);
           if (vt) setLocalVideoTrack(vt);
           if (at) localAudioTrackRef.current = at;
         }
-      } catch {
+      } catch (err) {
+        console.error("[LiveKit] Connection failed:", err);
         setDevMode(true);
         setConnectionState("dev-mode");
       }
