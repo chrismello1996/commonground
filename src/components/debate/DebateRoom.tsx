@@ -294,7 +294,7 @@ export default function DebateRoom({
     if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; }
     try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
     try {
-      const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category }) });
+      const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: currentUserId, category }) });
       const data = await res.json();
       if (data.status === "matched") router.push(`/debate/${data.debateId}`);
       else router.push("/debate");

@@ -132,7 +132,25 @@ export async function POST(req: Request) {
       await redis.set(`${MATCH_PREFIX}${userId}`, matchData, { ex: 120 });
       await redis.set(`${MATCH_PREFIX}${matchedEntry.userId}`, matchData, { ex: 120 });
 
-      return NextResponse.json({ matched: true, debateId: debate.id });
+      // Fetch opponent data for the match screen
+      const { data: opponentProfile } = await supabase
+        .from("users")
+        .select("username, elo")
+        .eq("id", matchedEntry.userId)
+        .single();
+
+      return NextResponse.json({
+        status: "matched",
+        matched: true,
+        debateId: debate.id,
+        topic,
+        opponent: {
+          userId: matchedEntry.userId,
+          username: opponentProfile?.username || "Unknown",
+          stance: matchedEntry.stance || "unknown",
+          elo: opponentProfile?.elo || 1200,
+        },
+      });
     }
 
     // No match found — add to queue
@@ -153,7 +171,7 @@ export async function POST(req: Request) {
 
     await redis.rpush(QUEUE_KEY, JSON.stringify(newEntry));
 
-    return NextResponse.json({ matched: false, queued: true });
+    return NextResponse.json({ status: "queued", matched: false, queued: true });
   } catch (error) {
     console.error("Matchmaking join error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

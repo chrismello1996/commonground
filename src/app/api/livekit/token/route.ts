@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Debate ID is required" }, { status: 400 });
     }
 
-    // Verify user is part of this debate
+    // Fetch debate details
     const { data: debate } = await supabase
       .from("debates")
       .select("user_a, user_b, status")
@@ -28,13 +28,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Debate not found" }, { status: 404 });
     }
 
-    if (debate.user_a !== user.id && debate.user_b !== user.id) {
-      return NextResponse.json({ error: "Not a participant" }, { status: 403 });
-    }
-
     if (debate.status !== "active") {
       return NextResponse.json({ error: "Debate is not active" }, { status: 400 });
     }
+
+    // Determine if user is a participant or a viewer
+    const isParticipant = debate.user_a === user.id || debate.user_b === user.id;
 
     // Get user profile for display name
     const { data: profile } = await supabase
@@ -47,7 +46,6 @@ export async function POST(request: NextRequest) {
     const apiSecret = process.env.LIVEKIT_API_SECRET;
 
     if (!apiKey || !apiSecret || apiKey === "your_livekit_api_key_here") {
-      // Return a dev-mode response so the UI still works without LiveKit configured
       return NextResponse.json({
         token: null,
         devMode: true,
@@ -66,13 +64,25 @@ export async function POST(request: NextRequest) {
       ttl: "2h",
     });
 
-    at.addGrant({
-      roomJoin: true,
-      room: roomName,
-      canPublish: true,
-      canSubscribe: true,
-      canPublishData: true,
-    });
+    if (isParticipant) {
+      // Participants can publish and subscribe (full video/audio)
+      at.addGrant({
+        roomJoin: true,
+        room: roomName,
+        canPublish: true,
+        canSubscribe: true,
+        canPublishData: true,
+      });
+    } else {
+      // Viewers can only subscribe (watch-only, no publishing)
+      at.addGrant({
+        roomJoin: true,
+        room: roomName,
+        canPublish: false,
+        canSubscribe: true,
+        canPublishData: false,
+      });
+    }
 
     const token = await at.toJwt();
 
@@ -80,6 +90,7 @@ export async function POST(request: NextRequest) {
       token,
       devMode: false,
       roomName,
+      isViewer: !isParticipant,
     });
   } catch (error) {
     console.error("LiveKit token error:", error);

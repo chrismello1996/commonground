@@ -24,7 +24,7 @@ interface MatchData {
   };
 }
 
-export default function FindDebate({ username, elo }: FindDebateProps) {
+export default function FindDebate({ userId, username, elo }: FindDebateProps) {
   const router = useRouter();
   const [state, setState] = useState<MatchState>("joining");
   const [matchData, setMatchData] = useState<MatchData | null>(null);
@@ -58,7 +58,7 @@ export default function FindDebate({ username, elo }: FindDebateProps) {
       const res = await fetch("/api/matchmaking/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: "anything" }),
+        body: JSON.stringify({ userId, category: "anything" }),
       });
 
       const data = await res.json();
