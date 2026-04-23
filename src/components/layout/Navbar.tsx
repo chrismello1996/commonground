@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signout } from "@/app/(auth)/actions";
 import NavTabs from "./NavTabs";
+import SearchBar from "./SearchBar";
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -52,15 +53,7 @@ export default async function Navbar() {
         {/* Right Side */}
         <div className="flex items-center gap-2">
           {/* Search Bar */}
-          <div className="hidden md:flex items-center bg-gray-100 border border-gray-200 rounded-lg px-2.5 h-8 min-w-[180px] gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40 flex-shrink-0">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              placeholder="Search debates, users, topics..."
-              className="border-none bg-transparent outline-none text-xs text-gray-900 w-full placeholder:text-gray-400"
-            />
-          </div>
+          <SearchBar />
 
           {/* User Badge with ELO */}
           {profile && (

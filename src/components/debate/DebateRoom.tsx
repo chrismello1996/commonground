@@ -97,7 +97,7 @@ export default function DebateRoom({
   const [isOpponentCamOff, setIsOpponentCamOff] = useState(true);
 
   // Debate features
-  const [debateViewers, setDebateViewers] = useState(Math.floor(Math.random() * 50) + 10);
+  const [debateViewers, setDebateViewers] = useState(0);
   const [debateTopic, setDebateTopic] = useState(topic || "");
   const [proposedTopic, setProposedTopic] = useState("");
   const [pendingProposal, setPendingProposal] = useState<{ topic: string; proposedBy: string } | null>(null);
@@ -140,12 +140,22 @@ export default function DebateRoom({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isActive]);
 
-  // Simulate viewer count changes
+  // Track real viewer count from LiveKit room participants
   useEffect(() => {
     if (!isActive) return;
-    const interval = setInterval(() => {
-      setDebateViewers((v) => Math.max(5, v + Math.floor(Math.random() * 8) - 3));
-    }, 8000);
+    const updateViewerCount = () => {
+      if (roomRef.current) {
+        // Total participants minus the 2 debaters = viewers
+        // remoteParticipants doesn't include localParticipant
+        const total = roomRef.current.remoteParticipants.size + 1; // +1 for self
+        const viewers = Math.max(0, total - 2); // subtract 2 debaters
+        setDebateViewers(viewers);
+      }
+    };
+    // Poll every 5 seconds (participants join/leave events could also be used,
+    // but polling is simpler and covers all cases)
+    updateViewerCount();
+    const interval = setInterval(updateViewerCount, 5000);
     return () => clearInterval(interval);
   }, [isActive]);
 
@@ -226,6 +236,14 @@ export default function DebateRoom({
           if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(false);
         });
         // Track local track publish/unpublish to keep video state in sync
+        // Track viewer count from participant join/leave
+        const updateCount = () => {
+          const total = room.remoteParticipants.size + 1;
+          setDebateViewers(Math.max(0, total - 2));
+        };
+        room.on(RoomEvent.ParticipantConnected, updateCount);
+        room.on(RoomEvent.ParticipantDisconnected, updateCount);
+
         room.on(RoomEvent.LocalTrackPublished, (pub) => {
           if (pub.track?.kind === Track.Kind.Video) {
             console.log("[LiveKit] Local video track published");
