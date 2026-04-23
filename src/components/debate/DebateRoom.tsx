@@ -225,6 +225,19 @@ export default function DebateRoom({
         room.on(RoomEvent.TrackUnmuted, (pub) => {
           if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(false);
         });
+        // Track local track publish/unpublish to keep video state in sync
+        room.on(RoomEvent.LocalTrackPublished, (pub) => {
+          if (pub.track?.kind === Track.Kind.Video) {
+            console.log("[LiveKit] Local video track published");
+            setLocalVideoTrack(pub.track as LocalTrack);
+          }
+        });
+        room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
+          if (pub.track?.kind === Track.Kind.Video) {
+            console.log("[LiveKit] Local video track unpublished");
+            setLocalVideoTrack(null);
+          }
+        });
         room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
           console.log("[LiveKit] Connection state:", state);
           setConnectionState(state);
@@ -266,19 +279,37 @@ export default function DebateRoom({
   }, [debateId, isActive]);
 
   const toggleMic = useCallback(async () => {
-    if (roomRef.current) await roomRef.current.localParticipant.setMicrophoneEnabled(!isMicOn);
-    setIsMicOn(!isMicOn);
+    if (!roomRef.current) return;
+    try {
+      const newState = !isMicOn;
+      await roomRef.current.localParticipant.setMicrophoneEnabled(newState);
+      const at = roomRef.current.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalTrack | undefined;
+      localAudioTrackRef.current = at || null;
+      setIsMicOn(newState);
+      console.log("[LiveKit] Mic toggled:", newState ? "on" : "off");
+    } catch (err) {
+      console.error("[LiveKit] Failed to toggle mic:", err);
+    }
   }, [isMicOn]);
 
   const toggleCam = useCallback(async () => {
-    if (roomRef.current) {
-      await roomRef.current.localParticipant.setCameraEnabled(!isCamOn);
-      if (!isCamOn) {
-        const vt = roomRef.current.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
-        if (vt) setLocalVideoTrack(vt);
-      } else { setLocalVideoTrack(null); }
+    if (!roomRef.current) return;
+    try {
+      const newState = !isCamOn;
+      await roomRef.current.localParticipant.setCameraEnabled(newState);
+      if (newState) {
+        // Camera just turned on — wait briefly for the track to be published
+        await new Promise((r) => setTimeout(r, 200));
+        const vt = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
+        setLocalVideoTrack(vt || null);
+      } else {
+        setLocalVideoTrack(null);
+      }
+      setIsCamOn(newState);
+      console.log("[LiveKit] Camera toggled:", newState ? "on" : "off");
+    } catch (err) {
+      console.error("[LiveKit] Failed to toggle camera:", err);
     }
-    setIsCamOn(!isCamOn);
   }, [isCamOn]);
 
   const handleEndDebate = useCallback(async () => {
