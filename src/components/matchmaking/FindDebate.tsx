@@ -34,13 +34,19 @@ export default function FindDebate({ userId, username, elo }: FindDebateProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasJoined = useRef(false);
 
-  // Clean up polling on unmount
+  // Clean up polling AND leave queue on unmount
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
+      // Remove from queue when navigating away
+      fetch("/api/matchmaking/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      }).catch(() => {});
     };
-  }, []);
+  }, [userId]);
 
   // Auto-join queue on mount
   useEffect(() => {
@@ -114,13 +120,17 @@ export default function FindDebate({ userId, username, elo }: FindDebateProps) {
     if (timerRef.current) clearInterval(timerRef.current);
 
     try {
-      await fetch("/api/matchmaking/leave", { method: "POST" });
+      await fetch("/api/matchmaking/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
     } catch {
       // Best effort
     }
 
     router.push("/");
-  }, [router]);
+  }, [router, userId]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);

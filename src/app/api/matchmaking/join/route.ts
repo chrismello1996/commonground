@@ -49,12 +49,21 @@ export async function POST(req: Request) {
     // Remove any existing entry for this user (re-queue)
     const filtered = queue.filter((e) => e.userId !== userId);
 
-    // Try to find a match
+    // Try to find a match — skip stale entries (older than 2 minutes)
+    const STALE_THRESHOLD_MS = 2 * 60 * 1000;
+    const now = Date.now();
     let matchedEntry: QueueEntry | null = null;
+    const staleEntries: QueueEntry[] = [];
 
     for (const entry of filtered) {
       // Can't match with yourself
       if (entry.userId === userId) continue;
+
+      // Skip stale entries — user likely navigated away without leaving queue
+      if (entry.joinedAt && now - entry.joinedAt > STALE_THRESHOLD_MS) {
+        staleEntries.push(entry);
+        continue;
+      }
 
       // "Anything" matches anyone
       if (category === "anything" || entry.category === "anything") {
@@ -68,6 +77,16 @@ export async function POST(req: Request) {
         if (opposites.includes(entry.stance)) {
           matchedEntry = entry;
           break;
+        }
+      }
+    }
+
+    // Clean up stale entries from the queue
+    for (const stale of staleEntries) {
+      for (const raw of queueRaw) {
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+        if (parsed.userId === stale.userId) {
+          await redis.lrem(QUEUE_KEY, 1, raw);
         }
       }
     }

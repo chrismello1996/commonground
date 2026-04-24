@@ -131,22 +131,33 @@ export default function WatchClient({
 
         // Track subscription: map participant identity to userA or userB
         room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication, participant: RemoteParticipant) => {
-          if (track.kind !== Track.Kind.Video) return;
-          console.log("[LiveKit Viewer] Video track subscribed from:", participant.identity);
-          if (participant.identity === userA.id) {
-            setVideoTrackA(track);
-          } else if (participant.identity === userB.id) {
-            setVideoTrackB(track);
+          if (track.kind === Track.Kind.Video) {
+            console.log("[LiveKit Viewer] Video track subscribed from:", participant.identity);
+            if (participant.identity === userA.id) {
+              setVideoTrackA(track);
+            } else if (participant.identity === userB.id) {
+              setVideoTrackB(track);
+            }
+          } else if (track.kind === Track.Kind.Audio) {
+            // Attach audio track for playback
+            const audioEl = track.attach();
+            audioEl.setAttribute("data-lk-audio", "viewer");
+            document.body.appendChild(audioEl);
+            console.log("[LiveKit Viewer] Audio track attached from:", participant.identity);
           }
         });
 
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication, participant: RemoteParticipant) => {
-          if (track.kind !== Track.Kind.Video) return;
-          console.log("[LiveKit Viewer] Video track unsubscribed from:", participant.identity);
-          if (participant.identity === userA.id) {
-            setVideoTrackA(null);
-          } else if (participant.identity === userB.id) {
-            setVideoTrackB(null);
+          if (track.kind === Track.Kind.Video) {
+            console.log("[LiveKit Viewer] Video track unsubscribed from:", participant.identity);
+            if (participant.identity === userA.id) {
+              setVideoTrackA(null);
+            } else if (participant.identity === userB.id) {
+              setVideoTrackB(null);
+            }
+          } else if (track.kind === Track.Kind.Audio) {
+            track.detach().forEach((el) => el.remove());
+            console.log("[LiveKit Viewer] Audio track detached from:", participant.identity);
           }
         });
 
@@ -199,6 +210,7 @@ export default function WatchClient({
     connectViewer();
     return () => {
       cancelled = true;
+      document.querySelectorAll("audio[data-lk-audio]").forEach((el) => el.remove());
       if (roomRef.current) {
         roomRef.current.disconnect();
         roomRef.current = null;

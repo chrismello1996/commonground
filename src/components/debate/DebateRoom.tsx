@@ -224,10 +224,26 @@ export default function DebateRoom({
 
         room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
           console.log("[LiveKit] Track subscribed:", track.kind);
-          if (track.kind === Track.Kind.Video) { setRemoteVideoTrack(track); setIsOpponentCamOff(false); }
+          if (track.kind === Track.Kind.Video) {
+            setRemoteVideoTrack(track);
+            setIsOpponentCamOff(false);
+          } else if (track.kind === Track.Kind.Audio) {
+            // Attach audio track to a temporary <audio> element for playback
+            const audioEl = track.attach();
+            audioEl.setAttribute("data-lk-audio", "remote");
+            document.body.appendChild(audioEl);
+            console.log("[LiveKit] Remote audio track attached");
+          }
         });
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
-          if (track.kind === Track.Kind.Video) { setRemoteVideoTrack(null); setIsOpponentCamOff(true); }
+          if (track.kind === Track.Kind.Video) {
+            setRemoteVideoTrack(null);
+            setIsOpponentCamOff(true);
+          } else if (track.kind === Track.Kind.Audio) {
+            // Remove the audio element from the DOM
+            track.detach().forEach((el) => el.remove());
+            console.log("[LiveKit] Remote audio track detached");
+          }
         });
         room.on(RoomEvent.TrackMuted, (pub) => {
           if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(true);
@@ -293,7 +309,12 @@ export default function DebateRoom({
     };
 
     connect();
-    return () => { cancelled = true; if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; } };
+    return () => {
+      cancelled = true;
+      // Clean up remote audio elements
+      document.querySelectorAll("audio[data-lk-audio]").forEach((el) => el.remove());
+      if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; }
+    };
   }, [debateId, isActive]);
 
   const toggleMic = useCallback(async () => {
