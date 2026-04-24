@@ -5,7 +5,7 @@ import Link from "next/link";
 import { STANCE_OPTIONS } from "@/utils/constants";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "@/components/debate/DebateChat";
-import { Room, RoomEvent, Track, RemoteTrack, RemoteTrackPublication, RemoteParticipant, ConnectionState } from "livekit-client";
+import LiveKitVideo from "@/components/debate/LiveKitVideo";
 
 interface WatchClientProps {
   debate: {
@@ -59,13 +59,7 @@ export default function WatchClient({
   );
   const supabaseRef = useRef(createClient());
 
-  // LiveKit viewer state
-  const [videoTrackA, setVideoTrackA] = useState<RemoteTrack | null>(null);
-  const [videoTrackB, setVideoTrackB] = useState<RemoteTrack | null>(null);
   const [devMode, setDevMode] = useState(false);
-  const roomRef = useRef<Room | null>(null);
-  const videoRefA = useRef<HTMLVideoElement>(null);
-  const videoRefB = useRef<HTMLVideoElement>(null);
 
   const categoryConfig = STANCE_OPTIONS[debate.category];
   const stanceLabelA = categoryConfig?.stances.find((s) => s.id === userA.stance)?.label || userA.stance;
@@ -96,153 +90,7 @@ export default function WatchClient({
     return () => { supabase.removeChannel(channel); };
   }, [debate.id]);
 
-  // Connect to LiveKit as a viewer (subscribe-only, no publishing)
-  useEffect(() => {
-    if (debate.status !== "active" || !currentUserId) return;
-    let cancelled = false;
-
-    const connectViewer = async () => {
-      try {
-        // Fetch viewer token
-        console.log("[LiveKit Viewer] Fetching token for debate:", debate.id);
-        const res = await fetch("/api/livekit/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ debateId: debate.id }),
-        });
-        const data = await res.json();
-        console.log("[LiveKit Viewer] Token response:", { devMode: data.devMode, hasToken: !!data.token });
-
-        if (!res.ok || data.devMode || !data.token || cancelled) {
-          setDevMode(true);
-          return;
-        }
-
-        const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-        if (!livekitUrl) {
-          console.error("[LiveKit Viewer] NEXT_PUBLIC_LIVEKIT_URL not set");
-          setDevMode(true);
-          return;
-        }
-
-        // Create room (viewer — no publishing)
-        const room = new Room({ adaptiveStream: true, dynacast: true });
-        roomRef.current = room;
-
-        // Track subscription: map participant identity to userA or userB
-        room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication, participant: RemoteParticipant) => {
-          if (track.kind === Track.Kind.Video) {
-            console.log("[LiveKit Viewer] Video track subscribed from:", participant.identity);
-            if (participant.identity === userA.id) {
-              setVideoTrackA(track);
-            } else if (participant.identity === userB.id) {
-              setVideoTrackB(track);
-            }
-          } else if (track.kind === Track.Kind.Audio) {
-            try {
-              const audioEl = track.attach();
-              audioEl.autoplay = true;
-              audioEl.setAttribute("data-lk-audio", "viewer");
-              document.body.appendChild(audioEl);
-              audioEl.play().catch(() => {
-                console.warn("[LiveKit Viewer] Audio autoplay blocked");
-              });
-              console.log("[LiveKit Viewer] Audio track attached from:", participant.identity);
-            } catch (err) {
-              console.error("[LiveKit Viewer] Failed to attach audio:", err);
-            }
-          }
-        });
-
-        room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication, participant: RemoteParticipant) => {
-          if (track.kind === Track.Kind.Video) {
-            console.log("[LiveKit Viewer] Video track unsubscribed from:", participant.identity);
-            if (participant.identity === userA.id) {
-              setVideoTrackA(null);
-            } else if (participant.identity === userB.id) {
-              setVideoTrackB(null);
-            }
-          } else if (track.kind === Track.Kind.Audio) {
-            try {
-              track.detach().forEach((el) => el.remove());
-            } catch { /* already detached */ }
-            console.log("[LiveKit Viewer] Audio track detached from:", participant.identity);
-          }
-        });
-
-        room.on(RoomEvent.TrackMuted, (pub, participant) => {
-          if (pub.track?.kind === Track.Kind.Video && participant instanceof RemoteParticipant) {
-            if (participant.identity === userA.id) setVideoTrackA(null);
-            else if (participant.identity === userB.id) setVideoTrackB(null);
-          }
-        });
-
-        room.on(RoomEvent.TrackUnmuted, (pub, participant) => {
-          if (pub.track?.kind === Track.Kind.Video && participant instanceof RemoteParticipant) {
-            const track = pub.track as RemoteTrack;
-            if (participant.identity === userA.id) setVideoTrackA(track);
-            else if (participant.identity === userB.id) setVideoTrackB(track);
-          }
-        });
-
-        room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
-          console.log("[LiveKit Viewer] Connection state:", state);
-        });
-
-        room.on(RoomEvent.Disconnected, () => {
-          console.log("[LiveKit Viewer] Disconnected");
-        });
-
-        // Connect (viewer only subscribes, never publishes)
-        console.log("[LiveKit Viewer] Connecting to:", livekitUrl);
-        await room.connect(livekitUrl, data.token);
-        console.log("[LiveKit Viewer] Connected successfully");
-
-        // Check if participants already have tracks published
-        if (!cancelled) {
-          room.remoteParticipants.forEach((participant) => {
-            participant.trackPublications.forEach((pub) => {
-              if (pub.track && pub.track.kind === Track.Kind.Video) {
-                console.log("[LiveKit Viewer] Found existing video track from:", participant.identity);
-                if (participant.identity === userA.id) setVideoTrackA(pub.track as RemoteTrack);
-                else if (participant.identity === userB.id) setVideoTrackB(pub.track as RemoteTrack);
-              }
-            });
-          });
-        }
-      } catch (err) {
-        console.error("[LiveKit Viewer] Connection failed:", err);
-        setDevMode(true);
-      }
-    };
-
-    connectViewer();
-    return () => {
-      cancelled = true;
-      document.querySelectorAll("audio[data-lk-audio]").forEach((el) => el.remove());
-      if (roomRef.current) {
-        roomRef.current.disconnect();
-        roomRef.current = null;
-      }
-    };
-  }, [debate.id, debate.status, currentUserId, userA.id, userB.id]);
-
-  // Attach/detach video tracks to <video> elements
-  useEffect(() => {
-    const el = videoRefA.current;
-    if (videoTrackA && el) {
-      videoTrackA.attach(el);
-      return () => { videoTrackA.detach(el); };
-    }
-  }, [videoTrackA]);
-
-  useEffect(() => {
-    const el = videoRefB.current;
-    if (videoTrackB && el) {
-      videoTrackB.attach(el);
-      return () => { videoTrackB.detach(el); };
-    }
-  }, [videoTrackB]);
+  // LiveKit connection handled by LiveKitVideo component
 
   const handleVote = async (side: "A" | "B") => {
     if (votedFor || !currentUserId) return;
@@ -274,6 +122,12 @@ export default function WatchClient({
   const isEnded = debate.status !== "active";
 
   return (
+    <LiveKitVideo
+      debateId={debate.id}
+      isParticipant={false}
+      onDevMode={() => setDevMode(true)}
+    >
+      {({ remoteVideoByIdentity }) => (
     <div className="flex flex-1 overflow-hidden">
       {/* Main Video Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -311,8 +165,8 @@ export default function WatchClient({
         <div className="flex-1 flex gap-0.5 bg-gray-100 p-1">
           {/* Debater A */}
           <div className="flex-1 relative rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
-            {videoTrackA ? (
-              <video ref={videoRefA} autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {remoteVideoByIdentity[userA.id] ? (
+              <div style={{ width: "100%", height: "100%" }}>{remoteVideoByIdentity[userA.id]}</div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <div
@@ -346,8 +200,8 @@ export default function WatchClient({
           </div>
           {/* Debater B */}
           <div className="flex-1 relative rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
-            {videoTrackB ? (
-              <video ref={videoRefB} autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {remoteVideoByIdentity[userB.id] ? (
+              <div style={{ width: "100%", height: "100%" }}>{remoteVideoByIdentity[userB.id]}</div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <div
@@ -461,5 +315,7 @@ export default function WatchClient({
         </div>
       )}
     </div>
+      )}
+    </LiveKitVideo>
   );
 }

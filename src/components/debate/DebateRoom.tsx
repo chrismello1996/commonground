@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Room, RoomEvent, Track, RemoteTrack, LocalTrack, ConnectionState } from "livekit-client";
+import { Track } from "livekit-client";
 import { STANCE_OPTIONS } from "@/utils/constants";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
+import LiveKitVideo from "./LiveKitVideo";
 import "@/styles/debate-room.css";
 
 // ===== FACT CHECK DATA =====
@@ -84,17 +85,7 @@ export default function DebateRoom({
   const router = useRouter();
   const [debateTime, setDebateTime] = useState(0);
   const [isActive, setIsActive] = useState(status === "active");
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isCamOn, setIsCamOn] = useState(true);
   const [devMode, setDevMode] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [connectionState, setConnectionState] = useState<string>("disconnected");
-
-  // Video state
-  const [localVideoTrack, setLocalVideoTrack] = useState<LocalTrack | null>(null);
-  const [remoteVideoTrack, setRemoteVideoTrack] = useState<RemoteTrack | null>(null);
-  const localAudioTrackRef = useRef<LocalTrack | null>(null);
-  const [isOpponentCamOff, setIsOpponentCamOff] = useState(true);
 
   // Debate features
   const [debateViewers, setDebateViewers] = useState(0);
@@ -113,7 +104,6 @@ export default function DebateRoom({
   // Reactions
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
 
-  const roomRef = useRef<Room | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isUserA = currentUserId === userA.id;
@@ -140,24 +130,7 @@ export default function DebateRoom({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isActive]);
 
-  // Track real viewer count from LiveKit room participants
-  useEffect(() => {
-    if (!isActive) return;
-    const updateViewerCount = () => {
-      if (roomRef.current) {
-        // Total participants minus the 2 debaters = viewers
-        // remoteParticipants doesn't include localParticipant
-        const total = roomRef.current.remoteParticipants.size + 1; // +1 for self
-        const viewers = Math.max(0, total - 2); // subtract 2 debaters
-        setDebateViewers(viewers);
-      }
-    };
-    // Poll every 5 seconds (participants join/leave events could also be used,
-    // but polling is simpler and covers all cases)
-    updateViewerCount();
-    const interval = setInterval(updateViewerCount, 5000);
-    return () => clearInterval(interval);
-  }, [isActive]);
+  // Viewer count is updated by LiveKitVideo component via onConnectionChange
 
   // Simulate vote changes
   const handleVote = (side: "A" | "B") => {
@@ -172,206 +145,15 @@ export default function DebateRoom({
     setMyVote(side);
   };
 
-  // Connect to LiveKit
-  useEffect(() => {
-    if (!isActive) return;
-    let cancelled = false;
-
-    const connect = async () => {
-      try {
-        // Step 1: Request browser permissions BEFORE connecting to LiveKit
-        // This ensures the user sees the permission prompt clearly
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          // Stop the test stream immediately — LiveKit will create its own
-          stream.getTracks().forEach((t) => t.stop());
-          console.log("[LiveKit] Camera & mic permissions granted");
-        } catch (permErr) {
-          console.error("[LiveKit] Permission denied:", permErr);
-          // Continue anyway — user can still participate without video
-        }
-
-        // Step 2: Fetch LiveKit token
-        console.log("[LiveKit] Fetching token for debate:", debateId);
-        const res = await fetch("/api/livekit/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ debateId }),
-        });
-        const data = await res.json();
-        console.log("[LiveKit] Token response:", { devMode: data.devMode, hasToken: !!data.token, status: res.status });
-
-        if (!res.ok) {
-          console.error("[LiveKit] Token error:", data.error);
-          setDevMode(true);
-          setConnectionState("dev-mode");
-          return;
-        }
-        if (data.devMode) { setDevMode(true); setConnectionState("dev-mode"); return; }
-        if (!data.token || cancelled) return;
-
-        const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-        if (!livekitUrl) {
-          console.error("[LiveKit] NEXT_PUBLIC_LIVEKIT_URL not set");
-          setDevMode(true);
-          setConnectionState("dev-mode");
-          return;
-        }
-
-        // Step 3: Create room and set up event handlers
-        const room = new Room({ adaptiveStream: true, dynacast: true });
-        roomRef.current = room;
-
-        room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
-          console.log("[LiveKit] Track subscribed:", track.kind);
-          if (track.kind === Track.Kind.Video) {
-            setRemoteVideoTrack(track);
-            setIsOpponentCamOff(false);
-          } else if (track.kind === Track.Kind.Audio) {
-            try {
-              const audioEl = track.attach();
-              audioEl.autoplay = true;
-              audioEl.setAttribute("data-lk-audio", "remote");
-              document.body.appendChild(audioEl);
-              // Force play in case autoplay is blocked
-              audioEl.play().catch(() => {
-                console.warn("[LiveKit] Audio autoplay blocked — will play on next user interaction");
-              });
-              console.log("[LiveKit] Remote audio track attached");
-            } catch (err) {
-              console.error("[LiveKit] Failed to attach audio track:", err);
-            }
-          }
-        });
-        room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
-          if (track.kind === Track.Kind.Video) {
-            setRemoteVideoTrack(null);
-            setIsOpponentCamOff(true);
-          } else if (track.kind === Track.Kind.Audio) {
-            try {
-              track.detach().forEach((el) => el.remove());
-            } catch { /* already detached */ }
-            console.log("[LiveKit] Remote audio track detached");
-          }
-        });
-        room.on(RoomEvent.TrackMuted, (pub) => {
-          if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(true);
-        });
-        room.on(RoomEvent.TrackUnmuted, (pub) => {
-          if (pub.track?.kind === Track.Kind.Video && !pub.isLocal) setIsOpponentCamOff(false);
-        });
-        // Track local track publish/unpublish to keep video state in sync
-        // Track viewer count from participant join/leave
-        const updateCount = () => {
-          const total = room.remoteParticipants.size + 1;
-          setDebateViewers(Math.max(0, total - 2));
-        };
-        room.on(RoomEvent.ParticipantConnected, updateCount);
-        room.on(RoomEvent.ParticipantDisconnected, updateCount);
-
-        room.on(RoomEvent.LocalTrackPublished, (pub) => {
-          if (pub.track?.kind === Track.Kind.Video) {
-            console.log("[LiveKit] Local video track published");
-            setLocalVideoTrack(pub.track as LocalTrack);
-          }
-        });
-        room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
-          if (pub.track?.kind === Track.Kind.Video) {
-            console.log("[LiveKit] Local video track unpublished");
-            setLocalVideoTrack(null);
-          }
-        });
-        room.on(RoomEvent.ConnectionStateChanged, (state: ConnectionState) => {
-          console.log("[LiveKit] Connection state:", state);
-          setConnectionState(state);
-        });
-        room.on(RoomEvent.Disconnected, () => setConnectionState("disconnected"));
-
-        // Step 4: Connect to LiveKit server
-        console.log("[LiveKit] Connecting to:", livekitUrl);
-        await room.connect(livekitUrl, data.token);
-        console.log("[LiveKit] Connected successfully");
-        setConnectionState("connected");
-        setDevMode(false);
-
-        // Step 5: Enable camera and microphone
-        if (!cancelled) {
-          try {
-            await room.localParticipant.enableCameraAndMicrophone();
-            console.log("[LiveKit] Camera & mic enabled");
-          } catch (mediaErr) {
-            console.warn("[LiveKit] Could not enable camera/mic:", mediaErr);
-            // Try enabling them separately
-            try { await room.localParticipant.setCameraEnabled(true); } catch { console.warn("[LiveKit] Camera failed"); }
-            try { await room.localParticipant.setMicrophoneEnabled(true); } catch { console.warn("[LiveKit] Mic failed"); }
-          }
-          const vt = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
-          const at = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalTrack | undefined;
-          console.log("[LiveKit] Local tracks — video:", !!vt, "audio:", !!at);
-          if (vt) setLocalVideoTrack(vt);
-          if (at) localAudioTrackRef.current = at;
-        }
-      } catch (err) {
-        console.error("[LiveKit] Connection failed:", err);
-        setDevMode(true);
-        setConnectionState("dev-mode");
-      }
-    };
-
-    connect();
-    return () => {
-      cancelled = true;
-      // Clean up remote audio elements
-      document.querySelectorAll("audio[data-lk-audio]").forEach((el) => el.remove());
-      if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; }
-    };
-  }, [debateId, isActive]);
-
-  const toggleMic = useCallback(async () => {
-    if (!roomRef.current) return;
-    try {
-      const newState = !isMicOn;
-      await roomRef.current.localParticipant.setMicrophoneEnabled(newState);
-      const at = roomRef.current.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalTrack | undefined;
-      localAudioTrackRef.current = at || null;
-      setIsMicOn(newState);
-      console.log("[LiveKit] Mic toggled:", newState ? "on" : "off");
-    } catch (err) {
-      console.error("[LiveKit] Failed to toggle mic:", err);
-    }
-  }, [isMicOn]);
-
-  const toggleCam = useCallback(async () => {
-    if (!roomRef.current) return;
-    try {
-      const newState = !isCamOn;
-      await roomRef.current.localParticipant.setCameraEnabled(newState);
-      if (newState) {
-        // Camera just turned on — wait briefly for the track to be published
-        await new Promise((r) => setTimeout(r, 200));
-        const vt = roomRef.current?.localParticipant.getTrackPublication(Track.Source.Camera)?.track as LocalTrack | undefined;
-        setLocalVideoTrack(vt || null);
-      } else {
-        setLocalVideoTrack(null);
-      }
-      setIsCamOn(newState);
-      console.log("[LiveKit] Camera toggled:", newState ? "on" : "off");
-    } catch (err) {
-      console.error("[LiveKit] Failed to toggle camera:", err);
-    }
-  }, [isCamOn]);
-
   const handleEndDebate = useCallback(async () => {
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; }
     try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
   }, [debateId]);
 
   const handleSkip = useCallback(async () => {
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    if (roomRef.current) { roomRef.current.disconnect(); roomRef.current = null; }
     try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
     try {
       const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: currentUserId, category }) });
@@ -379,10 +161,9 @@ export default function DebateRoom({
       if (data.status === "matched") router.push(`/debate/${data.debateId}`);
       else router.push("/debate");
     } catch { router.push("/debate"); }
-  }, [debateId, category, router]);
+  }, [debateId, category, router, currentUserId]);
 
   const handleLeave = useCallback(() => {
-    if (roomRef.current) roomRef.current.disconnect();
     router.push("/");
   }, [router]);
 
@@ -408,24 +189,7 @@ export default function DebateRoom({
   const normA = totalVotes > 0 ? Math.round((debateVotesA / totalVotes) * 100) : 50;
   const normB = totalVotes > 0 ? 100 - normA : 50;
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const el = localVideoRef.current;
-    if (localVideoTrack && el) {
-      localVideoTrack.attach(el);
-      return () => { localVideoTrack.detach(el); };
-    }
-  }, [localVideoTrack]);
-
-  useEffect(() => {
-    const el = remoteVideoRef.current;
-    if (remoteVideoTrack && el) {
-      remoteVideoTrack.attach(el);
-      return () => { remoteVideoTrack.detach(el); };
-    }
-  }, [remoteVideoTrack]);
+  // Video refs and track management handled by LiveKitVideo component
 
   // Supabase Realtime channel for topic proposals
   const supabaseRef = useRef(createClient());
@@ -502,6 +266,15 @@ export default function DebateRoom({
   const hasOpponentStance = opponent.stance !== "unknown" && opponent.stance !== "";
 
   return (
+    <LiveKitVideo
+      debateId={debateId}
+      isParticipant={true}
+      onDevMode={() => setDevMode(true)}
+      onConnectionChange={(connected, viewers) => {
+        setDebateViewers(viewers);
+      }}
+    >
+      {({ localVideoEl, remoteVideoEl, isCamOn, isMicOn, toggleCam, toggleMic }) => (
     <div className="debate-room-wrapper">
       <div className="debate-room">
         {/* ===== VIDEO AREA ===== */}
@@ -509,8 +282,8 @@ export default function DebateRoom({
           <div className="video-grid">
             {/* MY VIDEO PANEL */}
             <div className="video-panel">
-              {localVideoTrack && isCamOn ? (
-                <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {localVideoEl && isCamOn ? (
+                <div style={{ width: "100%", height: "100%" }}>{localVideoEl}</div>
               ) : (
                 <div className="video-placeholder">
                   <div className="video-placeholder-avatar" style={{ background: myStanceColor }}>{me.username[0]?.toUpperCase()}</div>
@@ -543,8 +316,8 @@ export default function DebateRoom({
 
             {/* OPPONENT VIDEO PANEL */}
             <div className="video-panel">
-              {remoteVideoTrack && !isOpponentCamOff ? (
-                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {remoteVideoEl ? (
+                <div style={{ width: "100%", height: "100%" }}>{remoteVideoEl}</div>
               ) : (
                 <div className="video-placeholder">
                   <div className="video-placeholder-avatar" style={{ background: opponentStanceColor }}>{opponent.username[0]?.toUpperCase()}</div>
@@ -768,5 +541,7 @@ export default function DebateRoom({
         />
       </div>
     </div>
+      )}
+    </LiveKitVideo>
   );
 }
