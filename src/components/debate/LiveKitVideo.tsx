@@ -116,7 +116,8 @@ function LiveKitVideoInner({
   // Notify parent of connection changes
   useEffect(() => {
     onConnectionChange?.(isConnected, viewerCount);
-  }, [isConnected, viewerCount, onConnectionChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, viewerCount]);
 
   const toggleCam = async () => {
     if (!localParticipant) return;
@@ -251,7 +252,8 @@ export default function LiveKitVideo({
 
     fetchToken();
     return () => { cancelled = true; };
-  }, [debateId, onDevMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debateId]);
 
   // Dev mode or not yet mounted — render children with no video
   if (!mounted || devMode || !token || !livekitUrl) {
