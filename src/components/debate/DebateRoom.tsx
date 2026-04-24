@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Track } from "livekit-client";
+// livekit-client types used by LiveKitVideo component
 import { STANCE_OPTIONS } from "@/utils/constants";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";

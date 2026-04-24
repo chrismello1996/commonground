@@ -38,11 +38,9 @@ interface LiveKitVideoProps {
 }
 
 function LiveKitVideoInner({
-  isParticipant,
   children,
   onConnectionChange,
 }: {
-  isParticipant: boolean;
   children: LiveKitVideoProps["children"];
   onConnectionChange?: LiveKitVideoProps["onConnectionChange"];
 }) {
@@ -166,6 +164,7 @@ export default function LiveKitVideo({
   const [token, setToken] = useState<string | null>(null);
   const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
 
   // Fetch token on mount
@@ -256,7 +255,6 @@ export default function LiveKitVideo({
       }}
     >
       <LiveKitVideoInner
-        isParticipant={isParticipant}
         onConnectionChange={onConnectionChange}
       >
         {children}
