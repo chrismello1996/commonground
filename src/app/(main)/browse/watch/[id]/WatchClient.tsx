@@ -139,11 +139,18 @@ export default function WatchClient({
               setVideoTrackB(track);
             }
           } else if (track.kind === Track.Kind.Audio) {
-            // Attach audio track for playback
-            const audioEl = track.attach();
-            audioEl.setAttribute("data-lk-audio", "viewer");
-            document.body.appendChild(audioEl);
-            console.log("[LiveKit Viewer] Audio track attached from:", participant.identity);
+            try {
+              const audioEl = track.attach();
+              audioEl.autoplay = true;
+              audioEl.setAttribute("data-lk-audio", "viewer");
+              document.body.appendChild(audioEl);
+              audioEl.play().catch(() => {
+                console.warn("[LiveKit Viewer] Audio autoplay blocked");
+              });
+              console.log("[LiveKit Viewer] Audio track attached from:", participant.identity);
+            } catch (err) {
+              console.error("[LiveKit Viewer] Failed to attach audio:", err);
+            }
           }
         });
 
@@ -156,7 +163,9 @@ export default function WatchClient({
               setVideoTrackB(null);
             }
           } else if (track.kind === Track.Kind.Audio) {
-            track.detach().forEach((el) => el.remove());
+            try {
+              track.detach().forEach((el) => el.remove());
+            } catch { /* already detached */ }
             console.log("[LiveKit Viewer] Audio track detached from:", participant.identity);
           }
         });

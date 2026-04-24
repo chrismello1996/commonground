@@ -228,11 +228,19 @@ export default function DebateRoom({
             setRemoteVideoTrack(track);
             setIsOpponentCamOff(false);
           } else if (track.kind === Track.Kind.Audio) {
-            // Attach audio track to a temporary <audio> element for playback
-            const audioEl = track.attach();
-            audioEl.setAttribute("data-lk-audio", "remote");
-            document.body.appendChild(audioEl);
-            console.log("[LiveKit] Remote audio track attached");
+            try {
+              const audioEl = track.attach();
+              audioEl.autoplay = true;
+              audioEl.setAttribute("data-lk-audio", "remote");
+              document.body.appendChild(audioEl);
+              // Force play in case autoplay is blocked
+              audioEl.play().catch(() => {
+                console.warn("[LiveKit] Audio autoplay blocked — will play on next user interaction");
+              });
+              console.log("[LiveKit] Remote audio track attached");
+            } catch (err) {
+              console.error("[LiveKit] Failed to attach audio track:", err);
+            }
           }
         });
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
@@ -240,8 +248,9 @@ export default function DebateRoom({
             setRemoteVideoTrack(null);
             setIsOpponentCamOff(true);
           } else if (track.kind === Track.Kind.Audio) {
-            // Remove the audio element from the DOM
-            track.detach().forEach((el) => el.remove());
+            try {
+              track.detach().forEach((el) => el.remove());
+            } catch { /* already detached */ }
             console.log("[LiveKit] Remote audio track detached");
           }
         });
@@ -283,6 +292,7 @@ export default function DebateRoom({
         await room.connect(livekitUrl, data.token);
         console.log("[LiveKit] Connected successfully");
         setConnectionState("connected");
+        setDevMode(false);
 
         // Step 5: Enable camera and microphone
         if (!cancelled) {
