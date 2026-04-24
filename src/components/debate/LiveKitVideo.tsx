@@ -38,9 +38,11 @@ interface LiveKitVideoProps {
 }
 
 function LiveKitVideoInner({
+  isParticipant,
   children,
   onConnectionChange,
 }: {
+  isParticipant: boolean;
   children: LiveKitVideoProps["children"];
   onConnectionChange?: LiveKitVideoProps["onConnectionChange"];
 }) {
@@ -49,8 +51,38 @@ function LiveKitVideoInner({
   const remoteParticipants = useRemoteParticipants();
   const { localParticipant } = useLocalParticipant();
 
-  const [isCamOn, setIsCamOn] = useState(true);
-  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCamOn, setIsCamOn] = useState(false);
+  const [isMicOn, setIsMicOn] = useState(false);
+  const [mediaInitialized, setMediaInitialized] = useState(false);
+
+  // Enable camera and mic after connection (with error handling for missing devices)
+  useEffect(() => {
+    if (!isConnected || !isParticipant || mediaInitialized || !localParticipant) return;
+    setMediaInitialized(true);
+
+    const enableMedia = async () => {
+      // Try camera
+      try {
+        await localParticipant.setCameraEnabled(true);
+        setIsCamOn(true);
+        console.log("[LiveKit] Camera enabled");
+      } catch (err) {
+        console.warn("[LiveKit] Camera not available:", err);
+        setIsCamOn(false);
+      }
+      // Try microphone
+      try {
+        await localParticipant.setMicrophoneEnabled(true);
+        setIsMicOn(true);
+        console.log("[LiveKit] Microphone enabled");
+      } catch (err) {
+        console.warn("[LiveKit] Microphone not available:", err);
+        setIsMicOn(false);
+      }
+    };
+
+    enableMedia();
+  }, [isConnected, isParticipant, mediaInitialized, localParticipant]);
 
   // Get all video tracks
   const tracks = useTracks(
@@ -161,11 +193,15 @@ export default function LiveKitVideo({
   onDevMode,
   children,
 }: LiveKitVideoProps) {
+  const [mounted, setMounted] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
+
+  // Prevent SSR hydration mismatch — only render LiveKit on client
+  useEffect(() => { setMounted(true); }, []);
 
   // Fetch token on mount
   useEffect(() => {
@@ -217,8 +253,8 @@ export default function LiveKitVideo({
     return () => { cancelled = true; };
   }, [debateId, onDevMode]);
 
-  // Dev mode fallback — render children with no video
-  if (devMode || !token || !livekitUrl) {
+  // Dev mode or not yet mounted — render children with no video
+  if (!mounted || devMode || !token || !livekitUrl) {
     return (
       <>
         {children({
@@ -241,8 +277,8 @@ export default function LiveKitVideo({
       token={token}
       serverUrl={livekitUrl}
       connect={true}
-      video={isParticipant}
-      audio={isParticipant}
+      video={false}
+      audio={false}
       options={{
         adaptiveStream: true,
         dynacast: true,
@@ -255,6 +291,7 @@ export default function LiveKitVideo({
       }}
     >
       <LiveKitVideoInner
+        isParticipant={isParticipant}
         onConnectionChange={onConnectionChange}
       >
         {children}
