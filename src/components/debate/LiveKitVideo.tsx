@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   LiveKitRoom,
   VideoTrack,
@@ -56,6 +56,9 @@ function LiveKitVideoInner({
     cameraTrack,
   } = useLocalParticipant();
 
+  // Track whether we've already attempted to enable media
+  const mediaInitRef = useRef(false);
+
   // Log connection state changes for debugging
   useEffect(() => {
     console.log("[LiveKit] Connection state:", connectionState);
@@ -65,6 +68,36 @@ function LiveKitVideoInner({
   useEffect(() => {
     console.log("[LiveKit] Remote participants:", remoteParticipants.length, remoteParticipants.map(p => p.identity));
   }, [remoteParticipants]);
+
+  // Enable camera and mic AFTER connection is established (with error handling for missing devices)
+  // We use video={false}/audio={false} on LiveKitRoom to prevent device errors from killing the connection,
+  // then manually enable here where we can catch errors gracefully.
+  useEffect(() => {
+    if (!isConnected || !isParticipant || !localParticipant || mediaInitRef.current) return;
+    mediaInitRef.current = true;
+
+    const enableMedia = async () => {
+      // Try camera first
+      try {
+        await localParticipant.setCameraEnabled(true);
+        console.log("[LiveKit] Camera enabled successfully");
+      } catch (err) {
+        console.warn("[LiveKit] Camera not available (this is OK on devices without a camera):", err);
+      }
+
+      // Try microphone separately — don't let camera failure prevent mic from working
+      try {
+        await localParticipant.setMicrophoneEnabled(true);
+        console.log("[LiveKit] Microphone enabled successfully");
+      } catch (err) {
+        console.warn("[LiveKit] Microphone not available:", err);
+      }
+    };
+
+    // Small delay to ensure room is fully ready before requesting media
+    const timer = setTimeout(enableMedia, 500);
+    return () => clearTimeout(timer);
+  }, [isConnected, isParticipant, localParticipant]);
 
   // Log track state for debugging
   useEffect(() => {
@@ -85,7 +118,7 @@ function LiveKitVideoInner({
   // Log tracks for debugging
   useEffect(() => {
     const trackInfo = tracks.map(t => ({
-      identity: t.participant?.identity,
+      identity: t.participant?.identity?.slice(0, 8),
       source: t.source,
       hasTrack: !!t.publication?.track,
       isSubscribed: t.publication?.isSubscribed,
@@ -276,13 +309,17 @@ export default function LiveKitVideo({
     );
   }
 
+  // IMPORTANT: video={false} and audio={false} prevents device errors from killing
+  // the entire connection (e.g. on Mac Mini without camera/mic). Media is enabled
+  // manually in LiveKitVideoInner after connection is established, with try/catch
+  // so missing devices don't crash anything.
   return (
     <LiveKitRoom
       token={token}
       serverUrl={livekitUrl}
       connect={true}
-      video={isParticipant}
-      audio={isParticipant}
+      video={false}
+      audio={false}
       options={{
         adaptiveStream: true,
         dynacast: true,
@@ -291,10 +328,11 @@ export default function LiveKitVideo({
         console.log("[LiveKit] Disconnected from room");
       }}
       onConnected={() => {
-        console.log("[LiveKit] Connected to room");
+        console.log("[LiveKit] Connected to room successfully");
       }}
       onError={(err) => {
-        console.error("[LiveKit] Room error:", err);
+        // Log but don't crash — device errors are expected on some machines
+        console.warn("[LiveKit] Room error (non-fatal):", err.message);
       }}
     >
       <LiveKitVideoInner
