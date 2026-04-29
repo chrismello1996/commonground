@@ -49,40 +49,29 @@ function LiveKitVideoInner({
   const connectionState = useConnectionState();
   const isConnected = connectionState === ConnectionState.Connected;
   const remoteParticipants = useRemoteParticipants();
-  const { localParticipant } = useLocalParticipant();
+  const {
+    localParticipant,
+    isCameraEnabled,
+    isMicrophoneEnabled,
+    cameraTrack,
+  } = useLocalParticipant();
 
-  const [isCamOn, setIsCamOn] = useState(false);
-  const [isMicOn, setIsMicOn] = useState(false);
-  const [mediaInitialized, setMediaInitialized] = useState(false);
-
-  // Enable camera and mic after connection (with error handling for missing devices)
+  // Log connection state changes for debugging
   useEffect(() => {
-    if (!isConnected || !isParticipant || mediaInitialized || !localParticipant) return;
-    setMediaInitialized(true);
+    console.log("[LiveKit] Connection state:", connectionState);
+  }, [connectionState]);
 
-    const enableMedia = async () => {
-      // Try camera
-      try {
-        await localParticipant.setCameraEnabled(true);
-        setIsCamOn(true);
-        console.log("[LiveKit] Camera enabled");
-      } catch (err) {
-        console.warn("[LiveKit] Camera not available:", err);
-        setIsCamOn(false);
-      }
-      // Try microphone
-      try {
-        await localParticipant.setMicrophoneEnabled(true);
-        setIsMicOn(true);
-        console.log("[LiveKit] Microphone enabled");
-      } catch (err) {
-        console.warn("[LiveKit] Microphone not available:", err);
-        setIsMicOn(false);
-      }
-    };
+  // Log when remote participants change
+  useEffect(() => {
+    console.log("[LiveKit] Remote participants:", remoteParticipants.length, remoteParticipants.map(p => p.identity));
+  }, [remoteParticipants]);
 
-    enableMedia();
-  }, [isConnected, isParticipant, mediaInitialized, localParticipant]);
+  // Log track state for debugging
+  useEffect(() => {
+    if (isParticipant) {
+      console.log("[LiveKit] Local media state — camera:", isCameraEnabled, "mic:", isMicrophoneEnabled);
+    }
+  }, [isCameraEnabled, isMicrophoneEnabled, isParticipant]);
 
   // Get all video tracks
   const tracks = useTracks(
@@ -92,6 +81,17 @@ function LiveKitVideoInner({
     ],
     { onlySubscribed: false }
   );
+
+  // Log tracks for debugging
+  useEffect(() => {
+    const trackInfo = tracks.map(t => ({
+      identity: t.participant?.identity,
+      source: t.source,
+      hasTrack: !!t.publication?.track,
+      isSubscribed: t.publication?.isSubscribed,
+    }));
+    console.log("[LiveKit] Tracks:", JSON.stringify(trackInfo));
+  }, [tracks]);
 
   // Separate local and remote video tracks
   const localVideoTrack = tracks.find(
@@ -110,7 +110,7 @@ function LiveKitVideoInner({
 
   const remoteVideoTrack = remoteVideoTracks[0] || null;
 
-  // Viewer count: total participants minus 2 debaters
+  // Viewer count: total participants minus 1 (the other debater)
   const viewerCount = Math.max(0, remoteParticipants.length - 1);
 
   // Notify parent of connection changes
@@ -122,8 +122,9 @@ function LiveKitVideoInner({
   const toggleCam = async () => {
     if (!localParticipant) return;
     try {
-      await localParticipant.setCameraEnabled(!isCamOn);
-      setIsCamOn(!isCamOn);
+      const newState = !isCameraEnabled;
+      await localParticipant.setCameraEnabled(newState);
+      console.log("[LiveKit] Camera toggled:", newState);
     } catch (err) {
       console.error("[LiveKit] Camera toggle failed:", err);
     }
@@ -132,8 +133,9 @@ function LiveKitVideoInner({
   const toggleMic = async () => {
     if (!localParticipant) return;
     try {
-      await localParticipant.setMicrophoneEnabled(!isMicOn);
-      setIsMicOn(!isMicOn);
+      const newState = !isMicrophoneEnabled;
+      await localParticipant.setMicrophoneEnabled(newState);
+      console.log("[LiveKit] Mic toggled:", newState);
     } catch (err) {
       console.error("[LiveKit] Mic toggle failed:", err);
     }
@@ -177,8 +179,8 @@ function LiveKitVideoInner({
         remoteVideoEl,
         remoteVideoByIdentity,
         isConnected,
-        isCamOn: isCamOn && !!localVideoTrack?.publication?.track,
-        isMicOn,
+        isCamOn: isCameraEnabled && !!cameraTrack,
+        isMicOn: isMicrophoneEnabled,
         toggleCam,
         toggleMic,
         viewerCount,
@@ -198,8 +200,6 @@ export default function LiveKitVideo({
   const [token, setToken] = useState<string | null>(null);
   const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [error, setError] = useState<string | null>(null);
 
   // Prevent SSR hydration mismatch — only render LiveKit on client
   useEffect(() => { setMounted(true); }, []);
@@ -210,6 +210,7 @@ export default function LiveKitVideo({
 
     const fetchToken = async () => {
       try {
+        console.log("[LiveKit] Fetching token for debate:", debateId);
         const res = await fetch("/api/livekit/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -221,13 +222,13 @@ export default function LiveKitVideo({
 
         if (!res.ok) {
           console.error("[LiveKit] Token error:", data.error);
-          setError(data.error);
           setDevMode(true);
           onDevMode?.();
           return;
         }
 
         if (data.devMode || !data.token) {
+          console.warn("[LiveKit] Dev mode — no LiveKit credentials configured");
           setDevMode(true);
           onDevMode?.();
           return;
@@ -241,6 +242,7 @@ export default function LiveKitVideo({
           return;
         }
 
+        console.log("[LiveKit] Token received, connecting to:", url);
         setToken(data.token);
         setLivekitUrl(url);
       } catch (err) {
@@ -279,8 +281,8 @@ export default function LiveKitVideo({
       token={token}
       serverUrl={livekitUrl}
       connect={true}
-      video={false}
-      audio={false}
+      video={isParticipant}
+      audio={isParticipant}
       options={{
         adaptiveStream: true,
         dynacast: true,
@@ -290,6 +292,9 @@ export default function LiveKitVideo({
       }}
       onConnected={() => {
         console.log("[LiveKit] Connected to room");
+      }}
+      onError={(err) => {
+        console.error("[LiveKit] Room error:", err);
       }}
     >
       <LiveKitVideoInner
