@@ -108,7 +108,6 @@ export default function WatchClient({
     // Optimistic update
     setVotedFor(side);
     if (previousVote) {
-      // Switching vote: remove from old side, add to new
       if (previousVote === "A") setVotesA((v) => Math.max(0, v - 1));
       else setVotesB((v) => Math.max(0, v - 1));
     }
@@ -124,8 +123,14 @@ export default function WatchClient({
           voted_for: side === "A" ? userA.id : userB.id,
         }),
       });
-      if (!res.ok) throw new Error("Vote failed");
-    } catch {
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Vote failed:", res.status, data.error);
+        throw new Error(data.error || "Vote failed");
+      }
+    } catch (err) {
+      console.error("Vote error:", err);
       // Revert on error
       setVotedFor(previousVote);
       if (previousVote) {

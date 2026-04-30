@@ -1,35 +1,10 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-async function getSupabase() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Server Component context
-          }
-        },
-      },
-    }
-  );
-}
-
-// POST /api/votes — cast a vote for a debater
+// POST /api/votes — cast or switch a vote for a debater
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await getSupabase();
+    const supabase = await createClient();
 
     const {
       data: { user },
@@ -49,13 +24,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Anti-cheat: debaters cannot vote in their own debate
-    const { data: debate } = await supabase
+    const { data: debate, error: debateError } = await supabase
       .from("debates")
       .select("user_a, user_b")
       .eq("id", debate_id)
       .single();
 
-    if (debate && (debate.user_a === user.id || debate.user_b === user.id)) {
+    if (debateError || !debate) {
+      console.error("Debate lookup error:", debateError);
+      return NextResponse.json(
+        { error: "Debate not found" },
+        { status: 404 }
+      );
+    }
+
+    if (debate.user_a === user.id || debate.user_b === user.id) {
       return NextResponse.json(
         { error: "Debaters cannot vote in their own debate" },
         { status: 403 }
@@ -70,24 +53,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate voted_for is actually one of the debaters
+    if (voted_for !== debate.user_a && voted_for !== debate.user_b) {
+      return NextResponse.json(
+        { error: "voted_for must be one of the debaters" },
+        { status: 400 }
+      );
+    }
+
     // Check if user already voted in this debate
-    const { data: existingVote } = await supabase
+    const { data: existingVote, error: lookupError } = await supabase
       .from("debate_votes")
       .select("id, voted_for")
       .eq("debate_id", debate_id)
       .eq("voter_id", user.id)
       .maybeSingle();
 
+    if (lookupError) {
+      console.error("Vote lookup error:", lookupError);
+      return NextResponse.json({ error: "Failed to check existing vote" }, { status: 500 });
+    }
+
     if (existingVote) {
       if (existingVote.voted_for === voted_for) {
         // Already voted for same person — no change needed
         return NextResponse.json({ vote: existingVote, changed: false }, { status: 200 });
       }
-      // Switch vote: delete old, insert new
-      await supabase
+
+      // Switch vote: delete old vote first
+      const { error: deleteError } = await supabase
         .from("debate_votes")
         .delete()
         .eq("id", existingVote.id);
+
+      if (deleteError) {
+        console.error("Vote delete error:", deleteError);
+        return NextResponse.json(
+          { error: "Failed to switch vote" },
+          { status: 500 }
+        );
+      }
     }
 
     // Insert new vote
@@ -107,7 +112,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ vote: data, changed: !!existingVote }, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("Vote API error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -118,7 +124,7 @@ export async function POST(req: NextRequest) {
 // GET /api/votes?debate_id=xxx — get vote counts for a debate
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await getSupabase();
+    const supabase = await createClient();
     const debateId = req.nextUrl.searchParams.get("debate_id");
 
     if (!debateId) {
@@ -156,7 +162,7 @@ export async function GET(req: NextRequest) {
         .select("voted_for")
         .eq("debate_id", debateId)
         .eq("voter_id", user.id)
-        .single();
+        .maybeSingle();
       userVote = existingVote?.voted_for || null;
     }
 
@@ -165,7 +171,8 @@ export async function GET(req: NextRequest) {
       total: votes?.length || 0,
       userVote,
     });
-  } catch {
+  } catch (err) {
+    console.error("Vote GET error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
