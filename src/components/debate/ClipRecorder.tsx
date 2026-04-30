@@ -214,32 +214,36 @@ export default function ClipRecorder({
     <>
       {/* Clip button */}
       <button
-        className={`ctrl-btn ${isRecording ? "danger" : ""}`}
+        className="ctrl-btn"
         onClick={isRecording ? stopRecording : startRecording}
         disabled={isUploading}
         title={isRecording ? "Stop clip" : "Clip this moment"}
-        style={
-          isRecording
-            ? {}
+        style={{
+          width: "auto",
+          borderRadius: 8,
+          padding: "0 14px",
+          gap: 6,
+          fontSize: 12,
+          fontWeight: 600,
+          fontFamily: "inherit",
+          ...(isRecording
+            ? {
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                border: "1px solid rgba(239, 68, 68, 0.35)",
+              }
             : {
-                width: "auto",
-                borderRadius: 8,
-                padding: "0 14px",
-                gap: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                fontFamily: "inherit",
                 background: "rgba(239, 68, 68, 0.1)",
                 color: "#ef4444",
                 border: "1px solid rgba(239, 68, 68, 0.2)",
-              }
-        }
+              }),
+        }}
       >
         {isUploading ? (
           <span style={{ fontSize: 11, fontWeight: 600 }}>Saving...</span>
         ) : isRecording ? (
           <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <rect x="4" y="4" width="16" height="16" rx="2" />
             </svg>
             <span style={{ fontSize: 11, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
