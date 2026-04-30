@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
 
     // Get current user's votes on these clips
     const { data: { user } } = await supabase.auth.getUser();
-    let userVotes: Record<string, number> = {};
+    const userVotes: Record<string, number> = {};
 
     if (user && clips && clips.length > 0) {
       const { data: votes } = await supabase
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
 
     // Get creator usernames
     const creatorIds = Array.from(new Set(clips?.map((c) => c.creator_id) || []));
-    let creatorMap: Record<string, string> = {};
+    const creatorMap: Record<string, string> = {};
     if (creatorIds.length > 0) {
       const { data: creators } = await supabase
         .from("users")
