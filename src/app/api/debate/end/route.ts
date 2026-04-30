@@ -4,12 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 // --- ELO Configuration ---
 const K_FACTOR = 32;
 const MIN_DEBATE_DURATION_SECS = 60; // Must last 60s+ to affect ELO
-const MIN_VOTES_FOR_ELO = 2; // Need 2+ spectator votes
+const MIN_VOTES_FOR_ELO = 3; // Need 3+ spectator votes for reliable signal
 const SAME_OPPONENT_COOLDOWN_MINS = 30; // No ELO from same opponent within 30 min
 
 /**
- * Standard ELO calculation.
- * scoreA: 1 = A wins, 0 = B wins, 0.5 = draw
+ * Vote-margin-scaled ELO calculation.
+ * scoreA is the fraction of votes user A received (0.0 to 1.0).
+ * Examples:
+ *   - A gets 70% of votes → scoreA = 0.7 → big ELO swing
+ *   - A gets 52% of votes → scoreA = 0.52 → small ELO swing
+ *   - Exact tie (50/50) → scoreA = 0.5 → near-zero change
  */
 function calculateElo(
   ratingA: number,
@@ -77,11 +81,13 @@ export async function POST(request: NextRequest) {
     }
     const totalVotes = votesA + votesB;
 
-    // --- Determine winner ---
+    // --- Determine winner + vote margin ---
     let winnerId: string | null = null;
     let loserId: string | null = null;
     let eloProcessed = false;
     let reason = "";
+    // Vote margin: fraction of votes for user A (used as ELO score)
+    const voteMarginA = totalVotes > 0 ? votesA / totalVotes : 0.5;
 
     if (!durationMet) {
       reason = `Debate too short (${durationSecs}s, need ${MIN_DEBATE_DURATION_SECS}s)`;
@@ -133,7 +139,8 @@ export async function POST(request: NextRequest) {
 
       const eloA = profileA?.elo ?? 1200;
       const eloB = profileB?.elo ?? 1200;
-      const scoreA = winnerId === debate.user_a ? 1 : 0;
+      // Use vote margin as score — e.g. 70% of votes for A → scoreA = 0.7
+      const scoreA = voteMarginA;
       const [newEloA, newEloB] = calculateElo(eloA, eloB, scoreA);
 
       // Update winner: new ELO + increment wins + track opponent
@@ -169,7 +176,8 @@ export async function POST(request: NextRequest) {
       });
 
       eloProcessed = true;
-      reason = "ELO updated";
+      const marginPct = Math.round(Math.abs(voteMarginA - 0.5) * 200);
+      reason = `ELO updated (${marginPct}% margin, ${totalVotes} votes)`;
     }
 
     // --- End the debate ---
