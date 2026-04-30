@@ -101,13 +101,22 @@ export default function WatchClient({
   }, [debate.id]);
 
   const handleVote = async (side: "A" | "B") => {
-    if (votedFor || !currentUserId) return;
+    if (!currentUserId || votedFor === side) return;
+
+    const previousVote = votedFor;
+
+    // Optimistic update
     setVotedFor(side);
+    if (previousVote) {
+      // Switching vote: remove from old side, add to new
+      if (previousVote === "A") setVotesA((v) => Math.max(0, v - 1));
+      else setVotesB((v) => Math.max(0, v - 1));
+    }
     if (side === "A") setVotesA((v) => v + 1);
     else setVotesB((v) => v + 1);
 
     try {
-      await fetch("/api/votes", {
+      const res = await fetch("/api/votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,10 +124,16 @@ export default function WatchClient({
           voted_for: side === "A" ? userA.id : userB.id,
         }),
       });
+      if (!res.ok) throw new Error("Vote failed");
     } catch {
-      setVotedFor(null);
-      if (side === "A") setVotesA((v) => v - 1);
-      else setVotesB((v) => v - 1);
+      // Revert on error
+      setVotedFor(previousVote);
+      if (previousVote) {
+        if (previousVote === "A") setVotesA((v) => v + 1);
+        else setVotesB((v) => v + 1);
+      }
+      if (side === "A") setVotesA((v) => Math.max(0, v - 1));
+      else setVotesB((v) => Math.max(0, v - 1));
     }
   };
 
@@ -225,7 +240,7 @@ export default function WatchClient({
                 <button
                   className={`vote-btn left ${votedFor === "A" ? "voted" : ""}`}
                   onClick={() => handleVote("A")}
-                  disabled={votedFor !== null || !currentUserId}
+                  disabled={!currentUserId}
                 >
                   {userA.username}
                 </button>
@@ -236,7 +251,7 @@ export default function WatchClient({
                 <button
                   className={`vote-btn right ${votedFor === "B" ? "voted" : ""}`}
                   onClick={() => handleVote("B")}
-                  disabled={votedFor !== null || !currentUserId}
+                  disabled={!currentUserId}
                 >
                   {userB.username}
                 </button>

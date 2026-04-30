@@ -70,24 +70,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert vote (unique constraint prevents double-voting)
+    // Upsert vote — allows switching from one debater to another
     const { data, error } = await supabase
       .from("debate_votes")
-      .insert({
-        debate_id,
-        voter_id: user.id,
-        voted_for,
-      })
+      .upsert(
+        {
+          debate_id,
+          voter_id: user.id,
+          voted_for,
+        },
+        { onConflict: "debate_id,voter_id" }
+      )
       .select()
       .single();
 
     if (error) {
-      if (error.code === "23505") {
-        return NextResponse.json(
-          { error: "You already voted in this debate" },
-          { status: 409 }
-        );
-      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
