@@ -20,7 +20,8 @@
   font-family: 'Inter', -apple-system, sans-serif;
   color: var(--txt);
   background: var(--bg);
-  height: 100vh;
+  height: 100%;
+  max-height: calc(100vh - 50px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -380,6 +381,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .vote-pct {
@@ -455,6 +457,7 @@
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(139, 69, 19, 0.06));
   border: 1px solid rgba(16, 185, 129, 0.2);
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .topic-banner {
@@ -532,6 +535,7 @@
   color: var(--muted);
   font-weight: 600;
   padding: 2px 0 0;
+  flex-shrink: 0;
 }
 
 .vote-count-left {
@@ -622,6 +626,7 @@
   justify-content: center;
   gap: 8px;
   padding: 2px 0;
+  flex-shrink: 0;
 }
 
 .ctrl-btn {
@@ -917,7 +922,7 @@
 }
 
 .debate-room-wrapper.viewer-mode .video-panel {
-  min-height: 260px;
+  min-height: 0;
 }
 
 .debate-room-wrapper.viewer-mode .video-placeholder-avatar {
