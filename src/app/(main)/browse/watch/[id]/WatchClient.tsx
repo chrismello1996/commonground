@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { STANCE_OPTIONS } from "@/utils/constants";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "@/components/debate/DebateChat";
 import LiveKitVideo from "@/components/debate/LiveKitVideo";
+import "@/styles/debate-room.css";
 
 interface WatchClientProps {
   debate: {
@@ -33,13 +35,15 @@ interface WatchClientProps {
   initialVotesB: number;
   initialUserVote: "A" | "B" | null;
   currentUserId: string | null;
+  /** IDs of other live debates for the Next button */
+  otherDebateIds: string[];
 }
 
 const formatTime = (s: number) =>
   `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
 const getEloRank = (elo: number) =>
-  elo >= 1800 ? "text-amber-800" : elo >= 1500 ? "text-gray-500" : "text-orange-700";
+  elo >= 1800 ? "gold" : elo >= 1500 ? "silver" : "bronze";
 
 export default function WatchClient({
   debate,
@@ -49,7 +53,9 @@ export default function WatchClient({
   initialVotesB,
   initialUserVote,
   currentUserId,
+  otherDebateIds,
 }: WatchClientProps) {
+  const router = useRouter();
   const [votedFor, setVotedFor] = useState<"A" | "B" | null>(initialUserVote);
   const [votesA, setVotesA] = useState(initialVotesA);
   const [votesB, setVotesB] = useState(initialVotesB);
@@ -57,6 +63,7 @@ export default function WatchClient({
   const [elapsed, setElapsed] = useState(
     Math.floor((Date.now() - new Date(debate.createdAt).getTime()) / 1000)
   );
+  const [viewerCount, setViewerCount] = useState(0);
   const supabaseRef = useRef(createClient());
 
   const [devMode, setDevMode] = useState(false);
@@ -64,12 +71,16 @@ export default function WatchClient({
   const categoryConfig = STANCE_OPTIONS[debate.category];
   const stanceLabelA = categoryConfig?.stances.find((s) => s.id === userA.stance)?.label || userA.stance;
   const stanceLabelB = categoryConfig?.stances.find((s) => s.id === userB.stance)?.label || userB.stance;
+  const stanceColorA = categoryConfig?.stances.find((s) => s.id === userA.stance)?.color || userA.color;
+  const stanceColorB = categoryConfig?.stances.find((s) => s.id === userB.stance)?.color || userB.color;
+
+  const isEnded = debate.status !== "active";
 
   useEffect(() => {
-    if (debate.status !== "active") return;
+    if (isEnded) return;
     const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(timer);
-  }, [debate.status]);
+  }, [isEnded]);
 
   // Listen for topic changes in real time
   useEffect(() => {
@@ -80,17 +91,12 @@ export default function WatchClient({
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "debates", filter: `id=eq.${debate.id}` },
         (payload) => {
-          if (payload.new.topic) {
-            setCurrentTopic(payload.new.topic);
-          }
+          if (payload.new.topic) setCurrentTopic(payload.new.topic);
         }
       )
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [debate.id]);
-
-  // LiveKit connection handled by LiveKitVideo component
 
   const handleVote = async (side: "A" | "B") => {
     if (votedFor || !currentUserId) return;
@@ -108,213 +114,218 @@ export default function WatchClient({
         }),
       });
     } catch {
-      // Revert on error
       setVotedFor(null);
       if (side === "A") setVotesA((v) => v - 1);
       else setVotesB((v) => v - 1);
     }
   };
 
-  const totalVotes = votesA + votesB;
-  const pctA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
-  const pctB = 100 - pctA;
+  const handleNext = () => {
+    if (otherDebateIds.length > 0) {
+      const randomId = otherDebateIds[Math.floor(Math.random() * otherDebateIds.length)];
+      router.push(`/browse/watch/${randomId}`);
+    } else {
+      router.push("/browse");
+    }
+  };
 
-  const isEnded = debate.status !== "active";
+  const handleLeave = () => {
+    router.push("/browse");
+  };
+
+  const totalVotes = votesA + votesB;
+  const normA = totalVotes > 0 ? Math.round((votesA / totalVotes) * 100) : 50;
+  const normB = totalVotes > 0 ? 100 - normA : 50;
+
+  const hasStanceA = stanceLabelA !== "unknown" && stanceLabelA !== "";
+  const hasStanceB = stanceLabelB !== "unknown" && stanceLabelB !== "";
 
   return (
     <LiveKitVideo
       debateId={debate.id}
       isParticipant={false}
       onDevMode={() => setDevMode(true)}
+      onConnectionChange={(_connected, viewers) => setViewerCount(viewers)}
     >
       {({ remoteVideoByIdentity }) => (
-    <div className="flex flex-1 overflow-hidden">
-      {/* Main Video Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Back button + stream info */}
-        <div className="px-4 py-2 border-b border-gray-200 flex items-center gap-3">
-          <Link href="/browse" className="text-gray-400 hover:text-gray-600 transition">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-            </svg>
-          </Link>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold truncate">{currentTopic || "No topic set yet"}</p>
-            <p className="text-[11px] text-gray-500">
-              {categoryConfig?.label || debate.category}
-              {stanceLabelA !== "unknown" && stanceLabelB !== "unknown" && (
-                <span> — {stanceLabelA} vs {stanceLabelB}</span>
+        <div className="debate-room-wrapper">
+          <div className="debate-room">
+            {/* ===== VIDEO AREA ===== */}
+            <div className="video-area">
+              <div className="video-grid">
+                {/* DEBATER A */}
+                <div className="video-panel">
+                  {remoteVideoByIdentity[userA.id] ? (
+                    <div style={{ width: "100%", height: "100%" }}>{remoteVideoByIdentity[userA.id]}</div>
+                  ) : (
+                    <div className="video-placeholder">
+                      <div className="video-placeholder-avatar" style={{ background: stanceColorA }}>
+                        {userA.username[0]?.toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{userA.username}</span>
+                      {!devMode && !isEnded && (
+                        <span style={{ fontSize: 9, color: "var(--muted)", marginTop: 4 }}>Waiting for video...</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="live-pill"><span className="live-pill-dot" />{isEnded ? "ENDED" : "LIVE"}</div>
+                  <div className="viewer-count-badge">{viewerCount}</div>
+                  <div className="video-label-row">
+                    <Link href={`/profile/${userA.username}`} className="video-label video-label-link">
+                      <span className="video-label-dot" style={{ background: "var(--green)" }} />
+                      {userA.username}
+                      <span className={`elo-badge ${getEloRank(userA.elo)}`}>{userA.elo}</span>
+                    </Link>
+                    {hasStanceA && (
+                      <div className="stance-badge" style={{ borderColor: stanceColorA }}>
+                        <span className="stance-badge-dot" style={{ background: stanceColorA }} />
+                        {stanceLabelA}
+                      </div>
+                    )}
+                  </div>
+                  <div className="uptime-badge">{formatTime(elapsed)}</div>
+                </div>
+
+                {/* DEBATER B */}
+                <div className="video-panel">
+                  {remoteVideoByIdentity[userB.id] ? (
+                    <div style={{ width: "100%", height: "100%" }}>{remoteVideoByIdentity[userB.id]}</div>
+                  ) : (
+                    <div className="video-placeholder">
+                      <div className="video-placeholder-avatar" style={{ background: stanceColorB }}>
+                        {userB.username[0]?.toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{userB.username}</span>
+                      {!devMode && !isEnded && (
+                        <span style={{ fontSize: 9, color: "var(--muted)", marginTop: 4 }}>Waiting for video...</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="video-label-row">
+                    <Link href={`/profile/${userB.username}`} className="video-label video-label-link">
+                      <span className="video-label-dot" style={{ background: "var(--red)" }} />
+                      {userB.username}
+                      <span className={`elo-badge ${getEloRank(userB.elo)}`}>{userB.elo}</span>
+                    </Link>
+                    {hasStanceB && (
+                      <div className="stance-badge" style={{ borderColor: stanceColorB }}>
+                        <span className="stance-badge-dot" style={{ background: stanceColorB }} />
+                        {stanceLabelB}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Vote bar + buttons (same style as DebateRoom) */}
+              <div className="vote-section" style={{ marginTop: 4 }}>
+                <div className="vote-pct left">{normA}%</div>
+                <button
+                  className={`vote-btn left ${votedFor === "A" ? "voted" : ""}`}
+                  onClick={() => handleVote("A")}
+                  disabled={votedFor !== null || !currentUserId}
+                >
+                  {userA.username}
+                </button>
+                <div className="vote-bar-lg" style={{ flex: 1 }}>
+                  <div className="vote-bar-left" style={{ width: `${normA}%` }} />
+                  <div className="vote-bar-right" />
+                </div>
+                <button
+                  className={`vote-btn right ${votedFor === "B" ? "voted" : ""}`}
+                  onClick={() => handleVote("B")}
+                  disabled={votedFor !== null || !currentUserId}
+                >
+                  {userB.username}
+                </button>
+                <div className="vote-pct right">{normB}%</div>
+              </div>
+              <div className="vote-count-row">
+                <span className="vote-count-left">{votesA}</span>
+                <span>{totalVotes} vote{totalVotes !== 1 ? "s" : ""}</span>
+                <span className="vote-count-right">{votesB}</span>
+              </div>
+
+              {/* Topic banner */}
+              <div className="topic-banner-wrap">
+                <div className="topic-banner">
+                  <span className="topic-label">{currentTopic ? "Topic" : "No topic set"}</span>
+                  <span className="topic-text">
+                    {currentTopic || "Debaters haven't set a topic yet"}
+                  </span>
+                </div>
+                {categoryConfig && (
+                  <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 4 }}>
+                    <span style={{ fontSize: 10, color: "var(--muted)" }}>
+                      {categoryConfig.label}
+                      {hasStanceA && hasStanceB && ` — ${stanceLabelA} vs ${stanceLabelB}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Controls bar — viewer version */}
+              <div className="controls-bar">
+                {!currentUserId && (
+                  <Link href="/login" className="ctrl-btn" style={{ fontSize: 11, gap: 4 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                      <polyline points="10 17 15 12 10 7" />
+                      <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                    <span>Sign in to vote</span>
+                  </Link>
+                )}
+                <button className="ctrl-btn leave-btn" onClick={handleLeave}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                  <span>Browse</span>
+                </button>
+                <button className="ctrl-btn next-btn" onClick={handleNext}>
+                  <span>Next</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 4 15 12 5 20 5 4" />
+                    <line x1="19" y1="5" x2="19" y2="19" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Dev mode indicator */}
+              {devMode && (
+                <div style={{ textAlign: "center", fontSize: 10, color: "#f59e0b", padding: 4, background: "rgba(245,158,11,.08)", borderRadius: 6 }}>
+                  Dev Mode — LiveKit not connected, video disabled
+                </div>
               )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {isEnded ? (
-              <span className="bg-gray-400 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">
-                ENDED
-              </span>
-            ) : (
-              <span className="bg-red-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide animate-pulse">
-                LIVE
-              </span>
-            )}
-            <span className="text-[11px] text-gray-500 font-mono">{formatTime(elapsed)}</span>
-          </div>
-        </div>
-
-        {/* Video Feed */}
-        <div className="flex-1 flex gap-0.5 bg-gray-100 p-1">
-          {/* Debater A */}
-          <div className="flex-1 relative rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
-            {remoteVideoByIdentity[userA.id] ? (
-              <div style={{ width: "100%", height: "100%" }}>{remoteVideoByIdentity[userA.id]}</div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-extrabold text-white"
-                  style={{ background: userA.color }}
-                >
-                  {userA.username[0].toUpperCase()}
-                </div>
-                <Link href={`/profile/${userA.username}`} className="text-sm font-bold text-gray-700 hover:underline hover:text-emerald-600 transition">{userA.username}</Link>
-                {!devMode && debate.status === "active" && (
-                  <span className="text-[10px] text-gray-400">Waiting for video...</span>
-                )}
-              </div>
-            )}
-            <Link href={`/profile/${userA.username}`} className="absolute bottom-3 left-3 bg-black/70 text-white px-2.5 py-1 rounded-md hover:bg-black/80 transition">
-              <p className="text-xs font-bold">{userA.username}</p>
-              <p className={`text-[10px] font-semibold ${getEloRank(userA.elo)}`}>{userA.elo} ELO</p>
-            </Link>
-            {stanceLabelA !== "unknown" && (
-              <div
-                className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
-                style={{ background: userA.color }}
-              >
-                {stanceLabelA}
-              </div>
-            )}
-          </div>
-          {/* VS divider */}
-          <div className="flex items-center justify-center w-10 text-emerald-500 font-black text-sm">
-            VS
-          </div>
-          {/* Debater B */}
-          <div className="flex-1 relative rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
-            {remoteVideoByIdentity[userB.id] ? (
-              <div style={{ width: "100%", height: "100%" }}>{remoteVideoByIdentity[userB.id]}</div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-extrabold text-white"
-                  style={{ background: userB.color }}
-                >
-                  {userB.username[0].toUpperCase()}
-                </div>
-                <Link href={`/profile/${userB.username}`} className="text-sm font-bold text-gray-700 hover:underline hover:text-emerald-600 transition">{userB.username}</Link>
-                {!devMode && debate.status === "active" && (
-                  <span className="text-[10px] text-gray-400">Waiting for video...</span>
-                )}
-              </div>
-            )}
-            <Link href={`/profile/${userB.username}`} className="absolute bottom-3 right-3 bg-black/70 text-white px-2.5 py-1 rounded-md text-right hover:bg-black/80 transition">
-              <p className="text-xs font-bold">{userB.username}</p>
-              <p className={`text-[10px] font-semibold ${getEloRank(userB.elo)}`}>{userB.elo} ELO</p>
-            </Link>
-            {stanceLabelB !== "unknown" && (
-              <div
-                className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
-                style={{ background: userB.color }}
-              >
-                {stanceLabelB}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Vote Bar + Buttons */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-          {/* Vote bar */}
-          <div className="flex h-6 rounded-full overflow-hidden mb-3 bg-gray-200">
-            <div
-              className="bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white transition-all duration-500"
-              style={{ width: `${pctA}%` }}
-            >
-              {pctA}%
             </div>
-            <div
-              className="bg-amber-800 flex items-center justify-center text-[10px] font-bold text-white transition-all duration-500"
-              style={{ width: `${pctB}%` }}
-            >
-              {pctB}%
-            </div>
-          </div>
-          {/* Vote buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleVote("A")}
-              disabled={votedFor !== null || !currentUserId}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition ${
-                votedFor === "A"
-                  ? "bg-emerald-500 text-white"
-                  : votedFor === "B"
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/30"
-              }`}
-            >
-              Vote {userA.username}
-            </button>
-            <button
-              onClick={() => handleVote("B")}
-              disabled={votedFor !== null || !currentUserId}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition ${
-                votedFor === "B"
-                  ? "bg-amber-800 text-white"
-                  : votedFor === "A"
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-amber-800/10 text-amber-800 hover:bg-amber-800/20 border border-amber-800/30"
-              }`}
-            >
-              Vote {userB.username}
-            </button>
-          </div>
-          {!currentUserId && (
-            <p className="text-[10px] text-gray-400 text-center mt-2">
-              <Link href="/login" className="text-emerald-500 hover:underline">Sign in</Link> to vote
-            </p>
-          )}
-          {totalVotes > 0 && (
-            <p className="text-[10px] text-gray-400 text-center mt-1">
-              {totalVotes} total vote{totalVotes !== 1 ? "s" : ""}
-            </p>
-          )}
-        </div>
-      </div>
 
-      {/* Chat Sidebar */}
-      {currentUserId ? (
-        <DebateChat
-          debateId={debate.id}
-          currentUserId={currentUserId}
-          currentUsername="Spectator"
-          userAId={userA.id}
-          userAUsername={userA.username}
-          userBUsername={userB.username}
-          isActive={!isEnded}
-          userAColor={userA.color}
-          userBColor={userB.color}
-          userAElo={userA.elo}
-          userBElo={userB.elo}
-          onReaction={() => {}}
-        />
-      ) : (
-        <div className="hidden lg:flex w-[320px] border-l border-gray-200 flex-col bg-gray-50 items-center justify-center">
-          <p className="text-xs text-gray-400 mb-2">Sign in to chat</p>
-          <Link href="/login" className="text-emerald-500 text-xs font-semibold hover:underline">
-            Sign In
-          </Link>
+            {/* ===== CHAT SIDEBAR ===== */}
+            {currentUserId ? (
+              <DebateChat
+                debateId={debate.id}
+                currentUserId={currentUserId}
+                currentUsername="Spectator"
+                userAId={userA.id}
+                userAUsername={userA.username}
+                userBUsername={userB.username}
+                isActive={!isEnded}
+                userAColor={stanceColorA}
+                userBColor={stanceColorB}
+                userAElo={userA.elo}
+                userBElo={userB.elo}
+                onReaction={() => {}}
+              />
+            ) : (
+              <div className="hidden lg:flex w-[320px] border-l flex-col bg-gray-50 items-center justify-center" style={{ borderColor: "var(--border)" }}>
+                <p className="text-xs text-gray-400 mb-2">Sign in to chat</p>
+                <Link href="/login" className="text-emerald-500 text-xs font-semibold hover:underline">
+                  Sign In
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </div>
       )}
     </LiveKitVideo>
   );

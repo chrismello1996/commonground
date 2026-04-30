@@ -81,6 +81,15 @@ export default async function WatchPage({ params }: WatchPageProps) {
     }
   }
 
+  // Fetch other active debate IDs for the "Next" button
+  const { data: otherDebates } = await supabase
+    .from("debates")
+    .select("id")
+    .eq("status", "active")
+    .neq("id", debate.id);
+
+  const otherDebateIds = otherDebates?.map((d) => d.id) || [];
+
   return (
     <WatchClient
       debate={{
@@ -108,6 +117,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
       initialVotesB={votesB}
       initialUserVote={userVote as "A" | "B" | null}
       currentUserId={user?.id || null}
+      otherDebateIds={otherDebateIds}
     />
   );
 }
