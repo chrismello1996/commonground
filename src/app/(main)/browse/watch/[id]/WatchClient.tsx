@@ -7,6 +7,7 @@ import { STANCE_OPTIONS } from "@/utils/constants";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "@/components/debate/DebateChat";
 import LiveKitVideo from "@/components/debate/LiveKitVideo";
+import ClipRecorder from "@/components/debate/ClipRecorder";
 import "@/styles/debate-room.css";
 
 interface WatchClientProps {
@@ -67,6 +68,7 @@ export default function WatchClient({
   const supabaseRef = useRef(createClient());
 
   const [devMode, setDevMode] = useState(false);
+  const videoGridRef = useRef<HTMLDivElement>(null);
 
   const categoryConfig = STANCE_OPTIONS[debate.category];
   const stanceLabelA = categoryConfig?.stances.find((s) => s.id === userA.stance)?.label || userA.stance;
@@ -152,7 +154,7 @@ export default function WatchClient({
           <div className="debate-room">
             {/* ===== VIDEO AREA ===== */}
             <div className="video-area">
-              <div className="video-grid">
+              <div className="video-grid" ref={videoGridRef}>
                 {/* DEBATER A */}
                 <div className="video-panel">
                   {remoteVideoByIdentity[userA.id] ? (
@@ -266,6 +268,9 @@ export default function WatchClient({
 
               {/* Controls bar — viewer version */}
               <div className="controls-bar">
+                {currentUserId && !isEnded && (
+                  <ClipRecorder debateId={debate.id} videoGridRef={videoGridRef} maxDuration={30} />
+                )}
                 {!currentUserId && (
                   <Link href="/login" className="ctrl-btn" style={{ fontSize: 11, gap: 4 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

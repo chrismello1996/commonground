@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
 import LiveKitVideo from "./LiveKitVideo";
+import ClipRecorder from "./ClipRecorder";
 import "@/styles/debate-room.css";
 
 // ===== FACT CHECK DATA =====
@@ -105,6 +106,7 @@ export default function DebateRoom({
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const videoGridRef = useRef<HTMLDivElement>(null);
 
   const isUserA = currentUserId === userA.id;
   const me = isUserA ? userA : userB;
@@ -279,7 +281,7 @@ export default function DebateRoom({
       <div className="debate-room">
         {/* ===== VIDEO AREA ===== */}
         <div className="video-area">
-          <div className="video-grid">
+          <div className="video-grid" ref={videoGridRef}>
             {/* MY VIDEO PANEL */}
             <div className="video-panel">
               {localVideoEl && isCamOn ? (
@@ -492,6 +494,9 @@ export default function DebateRoom({
               </svg>
               <span>Fact Check</span>
             </button>
+            {isActive && (
+              <ClipRecorder debateId={debateId} videoGridRef={videoGridRef} maxDuration={30} />
+            )}
             {isActive && (
               <ReportButton reportedUserId={opponent.id} reportedUsername={opponent.username} debateId={debateId} />
             )}
