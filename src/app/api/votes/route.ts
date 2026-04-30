@@ -70,25 +70,43 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Upsert vote — allows switching from one debater to another
+    // Check if user already voted in this debate
+    const { data: existingVote } = await supabase
+      .from("debate_votes")
+      .select("id, voted_for")
+      .eq("debate_id", debate_id)
+      .eq("voter_id", user.id)
+      .maybeSingle();
+
+    if (existingVote) {
+      if (existingVote.voted_for === voted_for) {
+        // Already voted for same person — no change needed
+        return NextResponse.json({ vote: existingVote, changed: false }, { status: 200 });
+      }
+      // Switch vote: delete old, insert new
+      await supabase
+        .from("debate_votes")
+        .delete()
+        .eq("id", existingVote.id);
+    }
+
+    // Insert new vote
     const { data, error } = await supabase
       .from("debate_votes")
-      .upsert(
-        {
-          debate_id,
-          voter_id: user.id,
-          voted_for,
-        },
-        { onConflict: "debate_id,voter_id" }
-      )
+      .insert({
+        debate_id,
+        voter_id: user.id,
+        voted_for,
+      })
       .select()
       .single();
 
     if (error) {
+      console.error("Vote insert error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ vote: data }, { status: 201 });
+    return NextResponse.json({ vote: data, changed: !!existingVote }, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },
