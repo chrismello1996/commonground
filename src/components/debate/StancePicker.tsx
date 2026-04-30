@@ -80,6 +80,7 @@ export default function StancePicker({
             onClick={() => {
               startTransition(() => {
                 router.push("/");
+                router.refresh();
               });
             }}
             disabled={isPending}
