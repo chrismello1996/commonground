@@ -218,7 +218,7 @@ export default function WatchClient({
               </div>
 
               {/* Vote bar + buttons (same style as DebateRoom) */}
-              <div className="vote-section" style={{ marginTop: 4 }}>
+              <div className="vote-section">
                 <div className="vote-pct left">{normA}%</div>
                 <button
                   className={`vote-btn left ${votedFor === "A" ? "voted" : ""}`}
