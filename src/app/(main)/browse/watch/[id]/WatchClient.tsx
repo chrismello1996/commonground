@@ -148,7 +148,7 @@ export default function WatchClient({
       onConnectionChange={(_connected, viewers) => setViewerCount(viewers)}
     >
       {({ remoteVideoByIdentity }) => (
-        <div className="debate-room-wrapper">
+        <div className="debate-room-wrapper viewer-mode">
           <div className="debate-room">
             {/* ===== VIDEO AREA ===== */}
             <div className="video-area">
