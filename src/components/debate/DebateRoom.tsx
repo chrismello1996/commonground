@@ -271,8 +271,64 @@ export default function DebateRoom({
     };
   }, [debateId, currentUserId]);
 
-  // Listen for debate status changes (opponent ended the debate)
-  // Auto-search for next opponent Omegle-style
+  // Auto-search when opponent leaves — Omegle-style
+  // Uses polling + Realtime for reliability
+  const autoSearchTriggered = useRef(false);
+
+  const triggerAutoSearch = useCallback(async () => {
+    if (autoSearchTriggered.current) return;
+    autoSearchTriggered.current = true;
+    setIsActive(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsAutoSearching(true);
+    setAutoSearchStatus("Opponent disconnected — finding next...");
+
+    try {
+      const res = await fetch("/api/matchmaking/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, category }),
+      });
+      const data = await res.json();
+      if (data.status === "matched") {
+        setAutoSearchStatus("Match found! Connecting...");
+        setTimeout(() => router.push(`/debate/${data.debateId}`), 800);
+      } else {
+        setAutoSearchStatus("Searching for opponent...");
+        setTimeout(() => router.push("/debate"), 800);
+      }
+    } catch {
+      setAutoSearchStatus("Searching for opponent...");
+      setTimeout(() => router.push("/debate"), 800);
+    }
+  }, [currentUserId, category, router]);
+
+  // Poll debate status every 3 seconds as primary detection
+  useEffect(() => {
+    if (!isActive) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const supabase = supabaseRef.current;
+        const { data } = await supabase
+          .from("debates")
+          .select("status")
+          .eq("id", debateId)
+          .single();
+
+        if (data && data.status !== "active") {
+          clearInterval(pollInterval);
+          triggerAutoSearch();
+        }
+      } catch {
+        // Silently retry
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [debateId, isActive, triggerAutoSearch]);
+
+  // Also listen via Realtime for faster detection (if enabled)
   useEffect(() => {
     const supabase = supabaseRef.current;
     const statusChannel = supabase
@@ -280,39 +336,16 @@ export default function DebateRoom({
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "debates", filter: `id=eq.${debateId}` },
-        async (payload) => {
+        (payload) => {
           if (payload.new.status && payload.new.status !== "active") {
-            // Opponent left — immediately start finding next
-            setIsActive(false);
-            if (timerRef.current) clearInterval(timerRef.current);
-            setIsAutoSearching(true);
-            setAutoSearchStatus("Opponent disconnected — finding next...");
-
-            try {
-              const res = await fetch("/api/matchmaking/join", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId: currentUserId, category }),
-              });
-              const data = await res.json();
-              if (data.status === "matched") {
-                setAutoSearchStatus("Match found! Connecting...");
-                setTimeout(() => router.push(`/debate/${data.debateId}`), 800);
-              } else {
-                setAutoSearchStatus("Searching for opponent...");
-                setTimeout(() => router.push("/debate"), 800);
-              }
-            } catch {
-              setAutoSearchStatus("Searching for opponent...");
-              setTimeout(() => router.push("/debate"), 800);
-            }
+            triggerAutoSearch();
           }
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(statusChannel); };
-  }, [debateId, currentUserId, category, router]);
+  }, [debateId, triggerAutoSearch]);
 
   const handleProposeTopic = () => {
     if (!proposedTopic.trim()) return;
