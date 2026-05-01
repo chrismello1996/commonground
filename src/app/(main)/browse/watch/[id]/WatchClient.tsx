@@ -68,6 +68,8 @@ export default function WatchClient({
   const supabaseRef = useRef(createClient());
 
   const [devMode, setDevMode] = useState(false);
+  const [debateStatus, setDebateStatus] = useState(debate.status);
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
   const videoGridRef = useRef<HTMLDivElement>(null);
 
   const categoryConfig = STANCE_OPTIONS[debate.category];
@@ -76,7 +78,7 @@ export default function WatchClient({
   const stanceColorA = categoryConfig?.stances.find((s) => s.id === userA.stance)?.color || userA.color;
   const stanceColorB = categoryConfig?.stances.find((s) => s.id === userB.stance)?.color || userB.color;
 
-  const isEnded = debate.status !== "active";
+  const isEnded = debateStatus !== "active";
 
   useEffect(() => {
     if (isEnded) return;
@@ -84,21 +86,42 @@ export default function WatchClient({
     return () => clearInterval(timer);
   }, [isEnded]);
 
-  // Listen for topic changes in real time
+  // Listen for topic AND status changes in real time
   useEffect(() => {
     const supabase = supabaseRef.current;
     const channel = supabase
-      .channel(`watch-topic-${debate.id}`)
+      .channel(`watch-debate-${debate.id}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "debates", filter: `id=eq.${debate.id}` },
         (payload) => {
           if (payload.new.topic) setCurrentTopic(payload.new.topic);
+          if (payload.new.status && payload.new.status !== "active") {
+            setDebateStatus(payload.new.status);
+          }
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [debate.id]);
+
+  // Auto-advance to next debate when this one ends
+  useEffect(() => {
+    if (!isEnded || debate.status !== "active") return; // only trigger on real-time end, not initial load
+    // Start 5-second countdown then navigate to next debate
+    setAutoAdvanceCountdown(5);
+    const timer = setInterval(() => {
+      setAutoAdvanceCountdown((c) => {
+        if (c === null || c <= 1) {
+          clearInterval(timer);
+          handleNext();
+          return null;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isEnded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleVote = async (side: "A" | "B") => {
     if (!currentUserId || votedFor === side) return;
@@ -238,6 +261,97 @@ export default function WatchClient({
                   </div>
                 </div>
               </div>
+
+              {/* Debate ended overlay with auto-advance countdown */}
+              {isEnded && autoAdvanceCountdown !== null && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 12,
+                    padding: "10px 16px",
+                    background: "rgba(239, 68, 68, 0.08)",
+                    border: "1px solid rgba(239, 68, 68, 0.2)",
+                    borderRadius: 8,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#ef4444" }}>
+                    Debate Ended
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--txt2)" }}>
+                    Moving to next debate in {autoAdvanceCountdown}s...
+                  </span>
+                  <button
+                    onClick={() => { setAutoAdvanceCountdown(null); }}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 5,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      color: "var(--txt2)",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Stay
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 5,
+                      border: "none",
+                      background: "var(--accent)",
+                      color: "#fff",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Next Now
+                  </button>
+                </div>
+              )}
+
+              {/* Debate ended — static banner when user chose to stay */}
+              {isEnded && autoAdvanceCountdown === null && debate.status === "active" && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "6px 12px",
+                    background: "rgba(239, 68, 68, 0.06)",
+                    border: "1px solid rgba(239, 68, 68, 0.15)",
+                    borderRadius: 6,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#ef4444" }}>Debate Ended</span>
+                  <button
+                    onClick={handleNext}
+                    style={{
+                      padding: "3px 10px",
+                      borderRadius: 4,
+                      border: "none",
+                      background: "var(--accent)",
+                      color: "#fff",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Watch Next
+                  </button>
+                </div>
+              )}
 
               {/* Vote bar + buttons (same style as DebateRoom) */}
               <div className="vote-section">

@@ -132,6 +132,21 @@ export default function DebateRoom({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isActive]);
 
+  // End debate on tab close / navigation away
+  useEffect(() => {
+    const endOnUnload = () => {
+      if (isActive) {
+        // Use sendBeacon for reliable delivery during page unload
+        navigator.sendBeacon(
+          "/api/debate/end",
+          new Blob([JSON.stringify({ debateId })], { type: "application/json" })
+        );
+      }
+    };
+    window.addEventListener("beforeunload", endOnUnload);
+    return () => window.removeEventListener("beforeunload", endOnUnload);
+  }, [isActive, debateId]);
+
   // Viewer count is updated by LiveKitVideo component via onConnectionChange
 
   // Simulate vote changes
@@ -165,9 +180,14 @@ export default function DebateRoom({
     } catch { router.push("/debate"); }
   }, [debateId, category, router, currentUserId]);
 
-  const handleLeave = useCallback(() => {
+  const handleLeave = useCallback(async () => {
+    if (isActive) {
+      setIsActive(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
+    }
     router.push("/");
-  }, [router]);
+  }, [router, isActive, debateId]);
 
   const submitFactCheck = (claim: string) => {
     const catData = FACT_CHECK_CLAIMS[category] || FACT_CHECK_CLAIMS.anything;
