@@ -10,6 +10,7 @@ export const CATEGORY_TAGS = [
   { id: "conspiracy", label: "Conspiracy", icon: "👁️" },
   { id: "pill", label: "Pill", icon: "💊" },
   { id: "religion", label: "Religion", icon: "🛐" },
+  { id: "government", label: "Government", icon: "🏛️" },
   { id: "unpopular", label: "Unpopular", icon: "🌶️" },
 ] as const;
 
@@ -156,6 +157,37 @@ export const STANCE_OPTIONS: Record<string, {
       deism: ["atheism", "christianity", "scientology"], satanism: ["christianity", "catholicism", "islam", "judaism", "buddhism"],
     },
   },
+  government: {
+    label: "Government", icon: "🏛️",
+    stances: [
+      { id: "democracy", label: "Democracy", color: "#3b82f6" },
+      { id: "republic", label: "Constitutional Republic", color: "#2563eb" },
+      { id: "socialism", label: "Socialism", color: "#ef4444" },
+      { id: "communism", label: "Communism", color: "#dc2626" },
+      { id: "fascism", label: "Fascism", color: "#1a1a1a" },
+      { id: "anarchy", label: "Anarchism", color: "#6b7280" },
+      { id: "monarchy", label: "Monarchy", color: "#d97706" },
+      { id: "theocracy", label: "Theocracy", color: "#7c3aed" },
+      { id: "libertarianism", label: "Libertarianism", color: "#eab308" },
+      { id: "authoritarianism", label: "Authoritarianism", color: "#991b1b" },
+      { id: "oligarchy", label: "Oligarchy", color: "#78716c" },
+      { id: "technocracy", label: "Technocracy", color: "#0891b2" },
+    ],
+    opposites: {
+      democracy: ["fascism", "authoritarianism", "monarchy", "oligarchy"],
+      republic: ["communism", "fascism", "monarchy", "authoritarianism"],
+      socialism: ["fascism", "libertarianism", "oligarchy"],
+      communism: ["fascism", "libertarianism", "monarchy", "republic"],
+      fascism: ["democracy", "communism", "anarchy", "republic", "socialism"],
+      anarchy: ["fascism", "authoritarianism", "monarchy", "theocracy"],
+      monarchy: ["democracy", "anarchy", "communism", "republic"],
+      theocracy: ["anarchy", "democracy", "technocracy"],
+      libertarianism: ["authoritarianism", "communism", "fascism", "theocracy"],
+      authoritarianism: ["democracy", "anarchy", "libertarianism"],
+      oligarchy: ["democracy", "socialism", "communism"],
+      technocracy: ["theocracy", "monarchy", "anarchy"],
+    },
+  },
 };
 
 // Debate topic pools — stance-aware prompts per category
@@ -230,6 +262,19 @@ export const DEBATE_TOPICS: Record<string, { general: string[]; stancePairs: Rec
       "christianity|atheism": ["Does God exist?", "Is the Bible literally true?", "Is faith a virtue or a weakness?", "Can atheists have objective morality?"],
       "islam|atheism": ["Is Islam compatible with Western values?", "Does secularism lead to moral decay?", "Is religious law ever justified in modern society?"],
       "christianity|islam": ["Is there one true religion?", "Can interfaith dialogue solve global conflict?", "Are Abrahamic religions more alike than different?"],
+    },
+  },
+  government: {
+    general: ["What is the ideal form of government?", "Is democracy the best system or just the least bad?", "Should governments have term limits?", "Is a benevolent dictatorship better than a dysfunctional democracy?", "Can any government truly represent the people?"],
+    stancePairs: {
+      "democracy|fascism": ["Is order more important than freedom?", "Does democracy lead to weak leadership?", "Can fascism ever be justified?", "Is mob rule worse than one-party rule?"],
+      "democracy|authoritarianism": ["Is strong leadership worth sacrificing civil liberties?", "Do democracies make better long-term decisions?", "Is China's model more effective than Western democracy?"],
+      "communism|libertarianism": ["Should the state own the means of production?", "Is private property a fundamental right or theft?", "Can a stateless society actually function?"],
+      "socialism|libertarianism": ["Should healthcare be a public service or a private market?", "Are regulations necessary or oppressive?", "Is the free market fair without government intervention?"],
+      "anarchy|authoritarianism": ["Is government inherently oppressive?", "Can society self-organize without a state?", "Is hierarchy natural or constructed?"],
+      "monarchy|republic": ["Is hereditary rule ever legitimate?", "Are constitutional monarchies more stable than republics?", "Does tradition have value in governance?"],
+      "democracy|oligarchy": ["Do the wealthy already run democracies?", "Is meritocracy just oligarchy with extra steps?", "Should the most qualified lead, regardless of popularity?"],
+      "technocracy|theocracy": ["Should scientists or religious leaders guide society?", "Is evidence-based policy better than faith-based governance?", "Can morality be legislated without religion?"],
     },
   },
   anything: {
@@ -342,6 +387,10 @@ export const FACTION_MOTTOS: Record<string, string> = {
   // Pill
   redPill: "Hard truths only", bluePill: "Comfort in the known", blackPill: "Nothing matters anyway", whitePill: "Optimism wins",
   purplePill: "Take from both sides", greyPill: "Nuance over narrative", greenPill: "Growth mindset", pinkPill: "Self-improvement first",
+  // Government
+  democracy: "Power to the people", republic: "Liberty through law", socialism: "Equality for all", communism: "Workers of the world, unite",
+  fascism: "Order above all", anarchy: "No gods, no masters", monarchy: "Born to rule", theocracy: "Divine authority",
+  libertarianism: "Maximum freedom", authoritarianism: "Strength through control", oligarchy: "The capable lead", technocracy: "Governed by expertise",
   // Religion
   christianity: "Faith and grace", islam: "Submission to truth", judaism: "Covenant and debate", hinduism: "Many paths, one truth",
   buddhism: "Middle way", sikhism: "Service and equality", atheism: "Reason over faith", agnosticism: "Honest uncertainty",
