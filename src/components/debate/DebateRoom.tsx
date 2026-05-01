@@ -405,7 +405,25 @@ export default function DebateRoom({
       <div className="debate-room">
         {/* ===== VIDEO AREA ===== */}
         <div className="video-area">
-          <div className="video-grid" ref={videoGridRef}>
+          <div className="video-grid" ref={videoGridRef} style={{ position: "relative" }}>
+            {/* Auto-search overlay — covers video grid */}
+            {isAutoSearching && (
+              <div className="auto-search-overlay">
+                <div className="auto-search-spinner" />
+                <h2 className="auto-search-title">Finding Opponent...</h2>
+                <p className="auto-search-subtitle">{autoSearchStatus}</p>
+                <button
+                  className="auto-search-stop"
+                  onClick={() => {
+                    setIsAutoSearching(false);
+                    autoSearchTriggered.current = false;
+                    router.push("/");
+                  }}
+                >
+                  Stop
+                </button>
+              </div>
+            )}
             {/* MY VIDEO PANEL */}
             <div className="video-panel">
               {localVideoEl && isCamOn ? (
@@ -570,54 +588,6 @@ export default function DebateRoom({
               </div>
             )}
           </div>
-
-          {/* Auto-search overlay — Omegle-style instant reconnect */}
-          {isAutoSearching && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 12,
-                padding: "10px 16px",
-                background: "rgba(16, 185, 129, 0.08)",
-                border: "1px solid rgba(16, 185, 129, 0.2)",
-                borderRadius: 8,
-                flexShrink: 0,
-              }}
-            >
-              <div
-                style={{
-                  width: 16,
-                  height: 16,
-                  border: "2px solid transparent",
-                  borderTop: "2px solid #10b981",
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite",
-                }}
-              />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981" }}>
-                {autoSearchStatus}
-              </span>
-              <button
-                onClick={() => {
-                  setIsAutoSearching(false);
-                  router.push("/");
-                }}
-                style={{
-                  fontSize: 11,
-                  padding: "4px 12px",
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 6,
-                  color: "var(--txt2)",
-                  cursor: "pointer",
-                }}
-              >
-                Stop
-              </button>
-            </div>
-          )}
 
           {/* Controls bar — sleek, no emoji */}
           <div className="controls-bar">
