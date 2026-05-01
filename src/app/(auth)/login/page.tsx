@@ -257,7 +257,8 @@ function LoginForm() {
           <p className="text-[10px] text-gray-400 text-center mt-4 leading-relaxed">
             By continuing, you agree to CommonGround&apos;s{" "}
             <a href="/terms" target="_blank" className="text-emerald-500 hover:underline">Terms of Service</a> and{" "}
-            <a href="/privacy" target="_blank" className="text-emerald-500 hover:underline">Privacy Policy</a>
+            <a href="/privacy" target="_blank" className="text-emerald-500 hover:underline">Privacy Policy</a>.{" "}
+            <a href="/takedown" target="_blank" className="text-emerald-500 hover:underline">Report content</a>
           </p>
         </div>
       </div>

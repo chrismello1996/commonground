@@ -184,7 +184,10 @@ export default function TermsOfServicePage() {
         {/* Footer links */}
         <div className="mt-12 pt-6 border-t border-gray-200 flex items-center justify-between text-xs text-gray-400">
           <span>&copy; {new Date().getFullYear()} CommonGround. All rights reserved.</span>
-          <Link href="/privacy" className="text-emerald-500 hover:underline">Privacy Policy</Link>
+          <div className="flex gap-3">
+            <Link href="/privacy" className="text-emerald-500 hover:underline">Privacy Policy</Link>
+            <Link href="/takedown" className="text-emerald-500 hover:underline">Content Removal</Link>
+          </div>
         </div>
       </main>
     </div>

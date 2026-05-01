@@ -167,6 +167,8 @@ export default async function HomePage() {
           <Link href="/terms" className="text-emerald-500 hover:underline">Terms of Service</Link>
           {" · "}
           <Link href="/privacy" className="text-emerald-500 hover:underline">Privacy Policy</Link>
+          {" · "}
+          <Link href="/takedown" className="text-emerald-500 hover:underline">Content Removal</Link>
         </p>
       </footer>
     </div>
