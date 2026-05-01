@@ -193,8 +193,7 @@ export async function POST(req: Request) {
     await redis.rpush(QUEUE_KEY, JSON.stringify(newEntry));
 
     return NextResponse.json({ status: "queued", matched: false, queued: true });
-  } catch (error) {
-    console.error("Matchmaking join error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

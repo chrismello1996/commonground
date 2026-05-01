@@ -42,8 +42,7 @@ export async function GET() {
 
     // Not in queue and no match
     return NextResponse.json({ status: "idle" });
-  } catch (error) {
-    console.error("Status check error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

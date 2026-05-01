@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST /api/votes — cast or switch a vote for a debater
 export async function POST(req: NextRequest) {
@@ -12,6 +13,15 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Rate limit: max 10 vote actions per 60 seconds per user
+    const { success, remaining } = rateLimit(`vote:${user.id}`, 10, 60_000);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many vote requests. Please slow down." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
     }
 
     const { debate_id, voted_for } = await req.json();
@@ -31,7 +41,6 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (debateError || !debate) {
-      console.error("Debate lookup error:", debateError);
       return NextResponse.json(
         { error: "Debate not found" },
         { status: 404 }
@@ -70,7 +79,6 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (lookupError) {
-      console.error("Vote lookup error:", lookupError);
       return NextResponse.json({ error: "Failed to check existing vote" }, { status: 500 });
     }
 
@@ -87,7 +95,6 @@ export async function POST(req: NextRequest) {
         .eq("id", existingVote.id);
 
       if (deleteError) {
-        console.error("Vote delete error:", deleteError);
         return NextResponse.json(
           { error: "Failed to switch vote" },
           { status: 500 }
@@ -107,13 +114,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Vote insert error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ vote: data, changed: !!existingVote }, { status: 201 });
-  } catch (err) {
-    console.error("Vote API error:", err);
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -171,8 +176,7 @@ export async function GET(req: NextRequest) {
       total: votes?.length || 0,
       userVote,
     });
-  } catch (err) {
-    console.error("Vote GET error:", err);
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

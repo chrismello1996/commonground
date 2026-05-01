@@ -69,7 +69,6 @@ export async function POST(req: Request) {
       .single();
 
     if (debateError || !debate) {
-      console.error("Failed to create debate from challenge:", debateError);
       return NextResponse.json({ error: "Failed to create debate" }, { status: 500 });
     }
 
@@ -87,8 +86,7 @@ export async function POST(req: Request) {
       status: "accepted",
       debateId: debate.id,
     });
-  } catch (error) {
-    console.error("Respond challenge error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

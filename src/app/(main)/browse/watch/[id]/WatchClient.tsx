@@ -149,11 +149,9 @@ export default function WatchClient({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        console.error("Vote failed:", res.status, data.error);
         throw new Error(data.error || "Vote failed");
       }
-    } catch (err) {
-      console.error("Vote error:", err);
+    } catch {
       // Revert on error
       setVotedFor(previousVote);
       if (previousVote) {

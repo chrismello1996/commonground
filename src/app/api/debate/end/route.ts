@@ -61,6 +61,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Debate already ended" }, { status: 400 });
     }
 
+    // --- Atomic lock: claim this debate for ending ---
+    // This prevents race conditions where two requests both see status="active"
+    const { data: claimed, error: claimError } = await supabase
+      .from("debates")
+      .update({ status: "ending" })
+      .eq("id", debateId)
+      .eq("status", "active") // Only succeeds if still active
+      .select("id")
+      .maybeSingle();
+
+    if (claimError || !claimed) {
+      return NextResponse.json({ error: "Debate already being processed" }, { status: 409 });
+    }
+
     // --- Duration check ---
     const durationSecs = Math.floor(
       (Date.now() - new Date(debate.created_at).getTime()) / 1000
@@ -192,10 +206,10 @@ export async function POST(request: NextRequest) {
         votes_b: votesB,
         min_duration_met: durationMet,
       })
-      .eq("id", debateId);
+      .eq("id", debateId)
+      .eq("status", "ending"); // Only update if we still own the lock
 
     if (updateError) {
-      console.error("Failed to end debate:", updateError);
       return NextResponse.json({ error: "Failed to end debate" }, { status: 500 });
     }
 
@@ -209,8 +223,7 @@ export async function POST(request: NextRequest) {
       durationSecs,
       reason,
     });
-  } catch (error) {
-    console.error("End debate error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

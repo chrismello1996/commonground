@@ -169,7 +169,7 @@ export default function DebateRoom({
     if (timerRef.current) clearInterval(timerRef.current);
     setIsAutoSearching(true);
     setAutoSearchStatus("Ending debate — finding next...");
-    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
+    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch { /* best-effort — navigating away regardless */ }
     try {
       const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: currentUserId, category }) });
       const data = await res.json();
@@ -180,7 +180,7 @@ export default function DebateRoom({
         setAutoSearchStatus("Searching for opponent...");
         setTimeout(() => router.push("/debate"), 800);
       }
-    } catch {
+    } catch { /* matchmaking failed — fall back to debate page */
       setAutoSearchStatus("Searching for opponent...");
       setTimeout(() => router.push("/debate"), 800);
     }
@@ -191,7 +191,7 @@ export default function DebateRoom({
     if (timerRef.current) clearInterval(timerRef.current);
     setIsAutoSearching(true);
     setAutoSearchStatus("Skipping — finding next...");
-    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
+    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch { /* best-effort — navigating away regardless */ }
     try {
       const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: currentUserId, category }) });
       const data = await res.json();
@@ -202,7 +202,7 @@ export default function DebateRoom({
         setAutoSearchStatus("Searching for opponent...");
         setTimeout(() => router.push("/debate"), 800);
       }
-    } catch {
+    } catch { /* matchmaking failed — fall back to debate page */
       setAutoSearchStatus("Searching for opponent...");
       setTimeout(() => router.push("/debate"), 800);
     }
@@ -212,7 +212,7 @@ export default function DebateRoom({
     if (isActive) {
       setIsActive(false);
       if (timerRef.current) clearInterval(timerRef.current);
-      try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
+      try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch { /* best-effort — navigating away regardless */ }
     }
     router.push("/");
   }, [router, isActive, debateId]);

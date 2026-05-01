@@ -40,7 +40,7 @@ export default function ChallengePage() {
         const data = await res.json();
         setPending({ incoming: data.incoming || [], outgoing: data.outgoing || [] });
       }
-    } catch {}
+    } catch { /* polling — silently ignore network errors */ }
   }, []);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function ChallengePage() {
           const data = await res.json();
           setResults(data.users || []);
         }
-      } catch {}
+      } catch { /* search — silently ignore network errors */ }
       setSearching(false);
     }, 300);
     return () => clearTimeout(timeout);

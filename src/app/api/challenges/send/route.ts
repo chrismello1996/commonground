@@ -60,13 +60,11 @@ export async function POST(req: Request) {
       .single();
 
     if (insertError) {
-      console.error("Challenge insert error:", insertError);
       return NextResponse.json({ error: "Failed to send challenge" }, { status: 500 });
     }
 
     return NextResponse.json({ status: "sent", challenge });
-  } catch (error) {
-    console.error("Send challenge error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

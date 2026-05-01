@@ -73,8 +73,7 @@ export async function GET() {
       outgoing: (outgoing || []).map(enrichChallenge),
       accepted: (accepted || []).map(enrichChallenge),
     });
-  } catch (error) {
-    console.error("Challenges list error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

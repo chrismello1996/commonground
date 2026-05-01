@@ -1,14 +1,23 @@
 import { NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
+import { createClient } from "@/lib/supabase/server";
 
 const MATCH_PREFIX = "matchmaking:match:";
 
 export async function POST(req: Request) {
   try {
+    // Auth check — only authenticated users can poll for matches
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { userId } = await req.json();
 
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    // Ensure user can only poll their own match status
+    if (!userId || userId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Check if there's a match result stored for this user
@@ -22,8 +31,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ matched: false });
-  } catch (error) {
-    console.error("Matchmaking poll error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

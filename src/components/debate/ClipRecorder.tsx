@@ -58,13 +58,13 @@ export default function ClipRecorder({
     if (videos.length >= 2) {
       // Side by side
       const halfW = Math.floor(w / 2) - 2;
-      try { ctx.drawImage(videos[0], 0, 0, halfW, h); } catch {}
-      try { ctx.drawImage(videos[1], halfW + 4, 0, halfW, h); } catch {}
+      try { ctx.drawImage(videos[0], 0, 0, halfW, h); } catch { /* video frame not ready */ }
+      try { ctx.drawImage(videos[1], halfW + 4, 0, halfW, h); } catch { /* video frame not ready */ }
       // Divider line
       ctx.fillStyle = "#333";
       ctx.fillRect(halfW, 0, 4, h);
     } else if (videos.length === 1) {
-      try { ctx.drawImage(videos[0], 0, 0, w, h); } catch {}
+      try { ctx.drawImage(videos[0], 0, 0, w, h); } catch { /* video frame not ready */ }
     } else {
       // No videos — draw placeholder
       ctx.fillStyle = "#666";

@@ -2,9 +2,51 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { STANCE_OPTIONS } from "@/utils/constants";
 import WatchClient from "./WatchClient";
+import type { Metadata } from "next";
 
 interface WatchPageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: WatchPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: debate } = await supabase
+    .from("debates")
+    .select("topic, category, user_a, user_b, status")
+    .eq("id", id)
+    .single();
+
+  if (!debate) {
+    return { title: "Debate Not Found — CommonGround" };
+  }
+
+  // Fetch participant usernames
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, username")
+    .in("id", [debate.user_a, debate.user_b]);
+
+  const userA = users?.find((u) => u.id === debate.user_a)?.username || "Debater";
+  const userB = users?.find((u) => u.id === debate.user_b)?.username || "Debater";
+  const isLive = debate.status === "active";
+
+  return {
+    title: `${isLive ? "LIVE: " : ""}${debate.topic || "Open Debate"} — CommonGround`,
+    description: `${userA} vs ${userB} debating "${debate.topic || "Open Topic"}" in ${debate.category}. ${isLive ? "Watch live and vote!" : "Watch the replay."}`,
+    openGraph: {
+      title: `${isLive ? "LIVE: " : ""}${debate.topic || "Open Debate"}`,
+      description: `${userA} vs ${userB} · ${debate.category} · ${isLive ? "Watch live now" : "Replay"}`,
+      url: `https://commongrounddebate.com/browse/watch/${id}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${isLive ? "LIVE: " : ""}${debate.topic || "Open Debate"}`,
+      description: `${userA} vs ${userB} on CommonGround`,
+    },
+  };
 }
 
 export default async function WatchPage({ params }: WatchPageProps) {

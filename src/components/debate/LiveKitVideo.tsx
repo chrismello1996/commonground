@@ -59,15 +59,6 @@ function LiveKitVideoInner({
   // Track whether we've already attempted to enable media
   const mediaInitRef = useRef(false);
 
-  // Log connection state changes for debugging
-  useEffect(() => {
-    console.log("[LiveKit] Connection state:", connectionState);
-  }, [connectionState]);
-
-  // Log when remote participants change
-  useEffect(() => {
-    console.log("[LiveKit] Remote participants:", remoteParticipants.length, remoteParticipants.map(p => p.identity));
-  }, [remoteParticipants]);
 
   // Enable camera and mic AFTER connection is established (with error handling for missing devices)
   // We use video={false}/audio={false} on LiveKitRoom to prevent device errors from killing the connection,
@@ -80,17 +71,15 @@ function LiveKitVideoInner({
       // Try camera first
       try {
         await localParticipant.setCameraEnabled(true);
-        console.log("[LiveKit] Camera enabled successfully");
-      } catch (err) {
-        console.warn("[LiveKit] Camera not available (this is OK on devices without a camera):", err);
+      } catch {
+        // Camera not available — expected on devices without a camera
       }
 
       // Try microphone separately — don't let camera failure prevent mic from working
       try {
         await localParticipant.setMicrophoneEnabled(true);
-        console.log("[LiveKit] Microphone enabled successfully");
-      } catch (err) {
-        console.warn("[LiveKit] Microphone not available:", err);
+      } catch {
+        // Microphone not available — non-fatal
       }
     };
 
@@ -98,13 +87,6 @@ function LiveKitVideoInner({
     const timer = setTimeout(enableMedia, 500);
     return () => clearTimeout(timer);
   }, [isConnected, isParticipant, localParticipant]);
-
-  // Log track state for debugging
-  useEffect(() => {
-    if (isParticipant) {
-      console.log("[LiveKit] Local media state — camera:", isCameraEnabled, "mic:", isMicrophoneEnabled);
-    }
-  }, [isCameraEnabled, isMicrophoneEnabled, isParticipant]);
 
   // Get all video tracks
   const tracks = useTracks(
@@ -114,17 +96,6 @@ function LiveKitVideoInner({
     ],
     { onlySubscribed: false }
   );
-
-  // Log tracks for debugging
-  useEffect(() => {
-    const trackInfo = tracks.map(t => ({
-      identity: t.participant?.identity?.slice(0, 8),
-      source: t.source,
-      hasTrack: !!t.publication?.track,
-      isSubscribed: t.publication?.isSubscribed,
-    }));
-    console.log("[LiveKit] Tracks:", JSON.stringify(trackInfo));
-  }, [tracks]);
 
   // Separate local and remote video tracks
   const localVideoTrack = tracks.find(
@@ -157,9 +128,8 @@ function LiveKitVideoInner({
     try {
       const newState = !isCameraEnabled;
       await localParticipant.setCameraEnabled(newState);
-      console.log("[LiveKit] Camera toggled:", newState);
-    } catch (err) {
-      console.error("[LiveKit] Camera toggle failed:", err);
+    } catch {
+      // Camera toggle failed — device may be unavailable
     }
   };
 
@@ -168,9 +138,8 @@ function LiveKitVideoInner({
     try {
       const newState = !isMicrophoneEnabled;
       await localParticipant.setMicrophoneEnabled(newState);
-      console.log("[LiveKit] Mic toggled:", newState);
-    } catch (err) {
-      console.error("[LiveKit] Mic toggle failed:", err);
+    } catch {
+      // Mic toggle failed — device may be unavailable
     }
   };
 
@@ -243,7 +212,6 @@ export default function LiveKitVideo({
 
     const fetchToken = async () => {
       try {
-        console.log("[LiveKit] Fetching token for debate:", debateId);
         const res = await fetch("/api/livekit/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -254,14 +222,12 @@ export default function LiveKitVideo({
         if (cancelled) return;
 
         if (!res.ok) {
-          console.error("[LiveKit] Token error:", data.error);
           setDevMode(true);
           onDevMode?.();
           return;
         }
 
         if (data.devMode || !data.token) {
-          console.warn("[LiveKit] Dev mode — no LiveKit credentials configured");
           setDevMode(true);
           onDevMode?.();
           return;
@@ -269,17 +235,14 @@ export default function LiveKitVideo({
 
         const url = process.env.NEXT_PUBLIC_LIVEKIT_URL;
         if (!url) {
-          console.error("[LiveKit] NEXT_PUBLIC_LIVEKIT_URL not set");
           setDevMode(true);
           onDevMode?.();
           return;
         }
 
-        console.log("[LiveKit] Token received, connecting to:", url);
         setToken(data.token);
         setLivekitUrl(url);
-      } catch (err) {
-        console.error("[LiveKit] Failed to fetch token:", err);
+      } catch {
         setDevMode(true);
         onDevMode?.();
       }
@@ -324,15 +287,8 @@ export default function LiveKitVideo({
         adaptiveStream: true,
         dynacast: true,
       }}
-      onDisconnected={() => {
-        console.log("[LiveKit] Disconnected from room");
-      }}
-      onConnected={() => {
-        console.log("[LiveKit] Connected to room successfully");
-      }}
-      onError={(err) => {
-        // Log but don't crash — device errors are expected on some machines
-        console.warn("[LiveKit] Room error (non-fatal):", err.message);
+      onError={() => {
+        // Device errors are expected on some machines — non-fatal
       }}
     >
       <LiveKitVideoInner

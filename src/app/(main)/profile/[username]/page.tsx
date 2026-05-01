@@ -3,6 +3,43 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ProfileTabs from "./ProfileTabs";
 import ChallengeButton from "@/components/challenges/ChallengeButton";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("username, display_name, elo, wins, losses")
+    .eq("username", username)
+    .single();
+
+  if (!profile) {
+    return { title: "User Not Found — CommonGround" };
+  }
+
+  const name = profile.display_name || profile.username;
+  const record = `${profile.wins || 0}W - ${profile.losses || 0}L`;
+
+  return {
+    title: `${name} (@${profile.username}) — CommonGround`,
+    description: `${name} is a debater on CommonGround with ${profile.elo} ELO (${record}). Challenge them to a live video debate.`,
+    openGraph: {
+      title: `${name} on CommonGround`,
+      description: `${profile.elo} ELO · ${record} · Challenge them to a live debate`,
+      url: `https://commongrounddebate.com/profile/${profile.username}`,
+    },
+    twitter: {
+      card: "summary",
+      title: `${name} on CommonGround`,
+      description: `${profile.elo} ELO · ${record}`,
+    },
+  };
+}
 
 export default async function ProfilePage({
   params,

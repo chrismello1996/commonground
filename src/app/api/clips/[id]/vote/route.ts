@@ -80,8 +80,7 @@ export async function POST(
       score: newScore,
       userVote: existingVote?.vote === vote ? null : vote,
     });
-  } catch (error) {
-    console.error("Vote error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

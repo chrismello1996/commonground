@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("Upload error:", uploadError);
       return NextResponse.json({ error: "Failed to upload clip" }, { status: 500 });
     }
 
@@ -82,13 +81,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error("Insert error:", insertError);
       return NextResponse.json({ error: "Failed to save clip" }, { status: 500 });
     }
 
     return NextResponse.json({ clip }, { status: 201 });
-  } catch (error) {
-    console.error("Create clip error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -170,8 +167,7 @@ export async function GET(request: NextRequest) {
           : clips[clips.length - 1].created_at
         : null,
     });
-  } catch (error) {
-    console.error("List clips error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

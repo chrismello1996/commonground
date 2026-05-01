@@ -92,8 +92,7 @@ export async function POST(request: NextRequest) {
       roomName,
       isViewer: !isParticipant,
     });
-  } catch (error) {
-    console.error("LiveKit token error:", error);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
