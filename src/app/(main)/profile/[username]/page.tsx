@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import ProfileTabs from "./ProfileTabs";
+import ChallengeButton from "@/components/challenges/ChallengeButton";
 
 export default async function ProfilePage({
   params,
@@ -72,9 +73,12 @@ export default async function ProfilePage({
               Edit Stances
             </Link>
           ) : (
-            <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-md text-xs font-bold hover:bg-emerald-600 transition">
-              Follow
-            </button>
+            <div className="flex items-center gap-1.5">
+              <ChallengeButton targetUserId={profile.id} targetUsername={profile.username} />
+              <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-md text-xs font-bold hover:bg-emerald-600 transition">
+                Follow
+              </button>
+            </div>
           )}
         </div>
 

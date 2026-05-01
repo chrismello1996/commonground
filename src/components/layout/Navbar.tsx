@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signout } from "@/app/(auth)/actions";
 import NavTabs from "./NavTabs";
 import SearchBar from "./SearchBar";
+import ChallengeNotifications from "../challenges/ChallengeNotifications";
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -54,6 +55,9 @@ export default async function Navbar() {
         <div className="flex items-center gap-2">
           {/* Search Bar */}
           <SearchBar />
+
+          {/* Challenge Notifications */}
+          {user && <ChallengeNotifications />}
 
           {/* User Badge with ELO */}
           {profile && (

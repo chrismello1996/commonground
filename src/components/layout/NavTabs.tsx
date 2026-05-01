@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const tabs = [
   { href: "/debate", label: "Debate", icon: "zap" },
   { href: "/browse", label: "Browse", icon: "eye" },
+  { href: "/challenge", label: "Challenge", icon: "swords" },
   { href: "/clips", label: "Clips", icon: "clip" },
 ];
 
@@ -18,6 +19,14 @@ const icons: Record<string, React.ReactNode> = {
   eye: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    </svg>
+  ),
+  swords: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+      <path d="M13 19l6-6" />
+      <path d="M16 16l4 4" />
+      <path d="M19 21l2-2" />
     </svg>
   ),
   clip: (
