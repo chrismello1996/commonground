@@ -23,10 +23,10 @@ async function loadModel() {
 
       // Use the lighter MobileNetV2 model for faster inference
       // Set backend to webgl for GPU acceleration
-      await tf.default.setBackend("webgl");
-      await tf.default.ready();
+      await tf.setBackend("webgl");
+      await tf.ready();
 
-      const model = await nsfwjs.default.load(
+      const model = await nsfwjs.load(
         "MobileNetV2",
         { size: 224 } // Smaller input = faster inference
       );
