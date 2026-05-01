@@ -243,6 +243,27 @@ export default function DebateRoom({
     };
   }, [debateId, currentUserId]);
 
+  // Listen for debate status changes (opponent ended the debate)
+  useEffect(() => {
+    const supabase = supabaseRef.current;
+    const statusChannel = supabase
+      .channel(`debate-status-${debateId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "debates", filter: `id=eq.${debateId}` },
+        (payload) => {
+          if (payload.new.status && payload.new.status !== "active") {
+            // Opponent ended the debate — update our local state
+            setIsActive(false);
+            if (timerRef.current) clearInterval(timerRef.current);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(statusChannel); };
+  }, [debateId]);
+
   const handleProposeTopic = () => {
     if (!proposedTopic.trim()) return;
     const proposal = { topic: proposedTopic.trim(), proposedBy: currentUserId };
@@ -466,6 +487,44 @@ export default function DebateRoom({
               </div>
             )}
           </div>
+
+          {/* Debate ended banner — opponent left */}
+          {!isActive && status === "active" && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                padding: "8px 14px",
+                background: "rgba(239, 68, 68, 0.08)",
+                border: "1px solid rgba(239, 68, 68, 0.2)",
+                borderRadius: 8,
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#ef4444" }}>
+                Debate Ended
+              </span>
+              <span style={{ fontSize: 11, color: "var(--txt2)" }}>
+                {opponent.username} has left the debate
+              </span>
+              <button
+                className="ctrl-btn next-btn"
+                onClick={handleSkip}
+                style={{ height: 30, fontSize: 11, padding: "0 12px" }}
+              >
+                Find Next
+              </button>
+              <button
+                className="ctrl-btn leave-btn"
+                onClick={handleLeave}
+                style={{ height: 30, fontSize: 11, padding: "0 12px" }}
+              >
+                Leave
+              </button>
+            </div>
+          )}
 
           {/* Controls bar — sleek, no emoji */}
           <div className="controls-bar">

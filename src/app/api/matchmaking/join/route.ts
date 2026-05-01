@@ -6,6 +6,10 @@ import { STANCE_OPTIONS, DEBATE_TOPICS } from "@/utils/constants";
 const QUEUE_KEY = "matchmaking:queue";
 const MATCH_PREFIX = "matchmaking:match:";
 
+// Entries older than 60 seconds are considered stale
+// (the client polls every 2s and re-joins, so fresh entries are always recent)
+const STALE_THRESHOLD_MS = 60 * 1000;
+
 interface QueueEntry {
   userId: string;
   category: string;
@@ -42,28 +46,30 @@ export async function POST(req: Request) {
 
     // Get all current queue entries
     const queueRaw = await redis.lrange(QUEUE_KEY, 0, -1);
-    const queue: QueueEntry[] = queueRaw.map((entry) =>
+    const now = Date.now();
+
+    // === AGGRESSIVE STALE CLEANUP ===
+    // Remove ALL stale entries upfront, not just during matching
+    for (const raw of queueRaw) {
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      const isStale = parsed.joinedAt && now - parsed.joinedAt > STALE_THRESHOLD_MS;
+      const isSelf = parsed.userId === userId;
+      if (isStale || isSelf) {
+        await redis.lrem(QUEUE_KEY, 0, raw); // 0 = remove ALL occurrences
+      }
+    }
+
+    // Re-fetch cleaned queue
+    const cleanedRaw = await redis.lrange(QUEUE_KEY, 0, -1);
+    const queue: QueueEntry[] = cleanedRaw.map((entry) =>
       typeof entry === "string" ? JSON.parse(entry) : entry
     );
 
-    // Remove any existing entry for this user (re-queue)
-    const filtered = queue.filter((e) => e.userId !== userId);
-
-    // Try to find a match — skip stale entries (older than 2 minutes)
-    const STALE_THRESHOLD_MS = 2 * 60 * 1000;
-    const now = Date.now();
+    // Try to find a match
     let matchedEntry: QueueEntry | null = null;
-    const staleEntries: QueueEntry[] = [];
 
-    for (const entry of filtered) {
-      // Can't match with yourself
+    for (const entry of queue) {
       if (entry.userId === userId) continue;
-
-      // Skip stale entries — user likely navigated away without leaving queue
-      if (entry.joinedAt && now - entry.joinedAt > STALE_THRESHOLD_MS) {
-        staleEntries.push(entry);
-        continue;
-      }
 
       // "Anything" matches anyone
       if (category === "anything" || entry.category === "anything") {
@@ -81,16 +87,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Clean up stale entries from the queue
-    for (const stale of staleEntries) {
-      for (const raw of queueRaw) {
-        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-        if (parsed.userId === stale.userId) {
-          await redis.lrem(QUEUE_KEY, 1, raw);
-        }
-      }
-    }
-
     if (matchedEntry) {
       // Create a debate in Supabase
       const supabase = await createClient();
@@ -101,7 +97,6 @@ export async function POST(req: Request) {
       let topic = "Open debate — discuss anything!";
 
       if (topicPool) {
-        // Try stance-specific topic first
         if (stance && matchedEntry.stance) {
           const pairKey1 = `${stance}|${matchedEntry.stance}`;
           const pairKey2 = `${matchedEntry.stance}|${stance}`;
@@ -136,22 +131,37 @@ export async function POST(req: Request) {
         );
       }
 
-      // Remove the matched user from queue
-      await redis.lrem(QUEUE_KEY, 1, JSON.stringify(matchedEntry));
-      // Also try removing if stored as object
-      for (const raw of queueRaw) {
+      // Remove the matched user from queue (all occurrences)
+      for (const raw of cleanedRaw) {
         const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
         if (parsed.userId === matchedEntry.userId) {
-          await redis.lrem(QUEUE_KEY, 1, raw);
+          await redis.lrem(QUEUE_KEY, 0, raw);
         }
       }
 
       // Store match result for both users to poll
-      const matchData = JSON.stringify({ debateId: debate.id, matched: true });
-      await redis.set(`${MATCH_PREFIX}${userId}`, matchData, { ex: 120 });
-      await redis.set(`${MATCH_PREFIX}${matchedEntry.userId}`, matchData, { ex: 120 });
+      const matchDataForSelf = JSON.stringify({
+        debateId: debate.id,
+        matched: true,
+        topic,
+        opponent: {
+          userId: matchedEntry.userId,
+          stance: matchedEntry.stance || "unknown",
+        },
+      });
+      const matchDataForOpponent = JSON.stringify({
+        debateId: debate.id,
+        matched: true,
+        topic,
+        opponent: {
+          userId: userId,
+          stance: stance || "unknown",
+        },
+      });
+      await redis.set(`${MATCH_PREFIX}${userId}`, matchDataForSelf, { ex: 120 });
+      await redis.set(`${MATCH_PREFIX}${matchedEntry.userId}`, matchDataForOpponent, { ex: 120 });
 
-      // Fetch opponent data for the match screen
+      // Fetch opponent data
       const { data: opponentProfile } = await supabase
         .from("users")
         .select("username, elo")
@@ -172,21 +182,13 @@ export async function POST(req: Request) {
       });
     }
 
-    // No match found — add to queue
+    // No match found — add to queue with fresh timestamp
     const newEntry: QueueEntry = {
       userId,
       category,
       stance,
       joinedAt: Date.now(),
     };
-
-    // Remove any old entry for this user first
-    for (const raw of queueRaw) {
-      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      if (parsed.userId === userId) {
-        await redis.lrem(QUEUE_KEY, 1, raw);
-      }
-    }
 
     await redis.rpush(QUEUE_KEY, JSON.stringify(newEntry));
 

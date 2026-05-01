@@ -34,9 +34,18 @@ export default function FindDebate({ userId, username, elo }: FindDebateProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasJoined = useRef(false);
 
-  // Clean up polling AND leave queue on unmount
+  // Clean up polling AND leave queue on unmount + tab close
   useEffect(() => {
+    const leaveOnUnload = () => {
+      navigator.sendBeacon(
+        "/api/matchmaking/leave",
+        new Blob([JSON.stringify({ userId })], { type: "application/json" })
+      );
+    };
+    window.addEventListener("beforeunload", leaveOnUnload);
+
     return () => {
+      window.removeEventListener("beforeunload", leaveOnUnload);
       if (pollRef.current) clearInterval(pollRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
       // Remove from queue when navigating away
@@ -88,8 +97,31 @@ export default function FindDebate({ userId, username, elo }: FindDebateProps) {
         setSearchTime((t) => t + 1);
       }, 1000);
 
+      // Poll for match status every 2 seconds
+      // Every 30 seconds, re-join the queue to keep the entry fresh
+      // (stale entries older than 60s are cleaned up)
+      let pollCount = 0;
       pollRef.current = setInterval(async () => {
+        pollCount++;
         try {
+          // Re-join every 15 polls (30 seconds) to refresh the entry timestamp
+          if (pollCount % 15 === 0) {
+            const rejoinRes = await fetch("/api/matchmaking/join", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId, category: "anything" }),
+            });
+            const rejoinData = await rejoinRes.json();
+            if (rejoinData.status === "matched") {
+              if (pollRef.current) clearInterval(pollRef.current);
+              if (timerRef.current) clearInterval(timerRef.current);
+              setState("matched");
+              setMatchData(rejoinData);
+              setTimeout(() => router.push(`/debate/${rejoinData.debateId}`), 3000);
+              return;
+            }
+          }
+
           const statusRes = await fetch("/api/matchmaking/status");
           const statusData = await statusRes.json();
 
@@ -100,10 +132,12 @@ export default function FindDebate({ userId, username, elo }: FindDebateProps) {
             setMatchData(statusData);
             setTimeout(() => router.push(`/debate/${statusData.debateId}`), 3000);
           } else if (statusData.status === "idle") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            if (timerRef.current) clearInterval(timerRef.current);
-            setState("error");
-            setError("Queue timed out. Try again!");
+            // Re-queue instead of giving up — user is still actively searching
+            await fetch("/api/matchmaking/join", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId, category: "anything" }),
+            });
           }
         } catch {
           // Silently retry
