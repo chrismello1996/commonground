@@ -45,15 +45,8 @@ export default function BrowseClient({ debates, trendingTopics, allTimeTopics }:
   };
 
   return (
+    <>
     <div className="flex-1 overflow-y-auto px-5 py-4">
-      {/* Trending Topics — top section */}
-      <TrendingTopics
-        trending={trendingTopics}
-        allTime={allTimeTopics}
-        activeTopic={activeTopic}
-        onTopicClick={setActiveTopic}
-      />
-
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-extrabold">
@@ -171,5 +164,14 @@ export default function BrowseClient({ debates, trendingTopics, allTimeTopics }:
         </div>
       )}
     </div>
+
+    {/* Trending Topics Sidebar */}
+    <TrendingTopics
+      trending={trendingTopics}
+      allTime={allTimeTopics}
+      activeTopic={activeTopic}
+      onTopicClick={setActiveTopic}
+    />
+    </>
   );
 }
