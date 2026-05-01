@@ -20,8 +20,6 @@ interface NSFWGuardProps {
 
 export default function NSFWGuard({
   debateId,
-  // userId is available for future use (e.g., server-side logging)
-  userId: _userId,
   isCamOn,
   toggleCam,
   onViolation,
