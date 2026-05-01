@@ -1,5 +1,8 @@
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const nsfwModels = path.join(__dirname, "node_modules", "nsfwjs", "dist", "esm", "model_imports");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -17,9 +20,9 @@ const nextConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...config.resolve.alias,
-      [require.resolve("nsfwjs/dist/esm/model_imports/inception_v3.js")]: false,
-      [require.resolve("nsfwjs/dist/esm/model_imports/mobilenet_v2.js")]: false,
-      [require.resolve("nsfwjs/dist/esm/model_imports/mobilenet_v2_mid.js")]: false,
+      [path.join(nsfwModels, "inception_v3.js")]: false,
+      [path.join(nsfwModels, "mobilenet_v2.js")]: false,
+      [path.join(nsfwModels, "mobilenet_v2_mid.js")]: false,
     };
 
     return config;
