@@ -979,6 +979,12 @@
   width: auto;
 }
 
+/* ===== AUTO-SEARCH SPINNER ===== */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
   .chat-sidebar { display: none; }

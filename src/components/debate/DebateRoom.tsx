@@ -87,6 +87,8 @@ export default function DebateRoom({
   const [debateTime, setDebateTime] = useState(0);
   const [isActive, setIsActive] = useState(status === "active");
   const [devMode, setDevMode] = useState(false);
+  const [isAutoSearching, setIsAutoSearching] = useState(false);
+  const [autoSearchStatus, setAutoSearchStatus] = useState<string>("");
 
   // Debate features
   const [debateViewers, setDebateViewers] = useState(0);
@@ -165,19 +167,45 @@ export default function DebateRoom({
   const handleEndDebate = useCallback(async () => {
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
-  }, [debateId]);
-
-  const handleSkip = useCallback(async () => {
-    setIsActive(false);
-    if (timerRef.current) clearInterval(timerRef.current);
+    setIsAutoSearching(true);
+    setAutoSearchStatus("Ending debate — finding next...");
     try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
     try {
       const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: currentUserId, category }) });
       const data = await res.json();
-      if (data.status === "matched") router.push(`/debate/${data.debateId}`);
-      else router.push("/debate");
-    } catch { router.push("/debate"); }
+      if (data.status === "matched") {
+        setAutoSearchStatus("Match found! Connecting...");
+        setTimeout(() => router.push(`/debate/${data.debateId}`), 800);
+      } else {
+        setAutoSearchStatus("Searching for opponent...");
+        setTimeout(() => router.push("/debate"), 800);
+      }
+    } catch {
+      setAutoSearchStatus("Searching for opponent...");
+      setTimeout(() => router.push("/debate"), 800);
+    }
+  }, [debateId, currentUserId, category, router]);
+
+  const handleSkip = useCallback(async () => {
+    setIsActive(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsAutoSearching(true);
+    setAutoSearchStatus("Skipping — finding next...");
+    try { await fetch("/api/debate/end", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) }); } catch {}
+    try {
+      const res = await fetch("/api/matchmaking/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: currentUserId, category }) });
+      const data = await res.json();
+      if (data.status === "matched") {
+        setAutoSearchStatus("Match found! Connecting...");
+        setTimeout(() => router.push(`/debate/${data.debateId}`), 800);
+      } else {
+        setAutoSearchStatus("Searching for opponent...");
+        setTimeout(() => router.push("/debate"), 800);
+      }
+    } catch {
+      setAutoSearchStatus("Searching for opponent...");
+      setTimeout(() => router.push("/debate"), 800);
+    }
   }, [debateId, category, router, currentUserId]);
 
   const handleLeave = useCallback(async () => {
@@ -244,6 +272,7 @@ export default function DebateRoom({
   }, [debateId, currentUserId]);
 
   // Listen for debate status changes (opponent ended the debate)
+  // Auto-search for next opponent Omegle-style
   useEffect(() => {
     const supabase = supabaseRef.current;
     const statusChannel = supabase
@@ -251,18 +280,39 @@ export default function DebateRoom({
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "debates", filter: `id=eq.${debateId}` },
-        (payload) => {
+        async (payload) => {
           if (payload.new.status && payload.new.status !== "active") {
-            // Opponent ended the debate — update our local state
+            // Opponent left — immediately start finding next
             setIsActive(false);
             if (timerRef.current) clearInterval(timerRef.current);
+            setIsAutoSearching(true);
+            setAutoSearchStatus("Opponent disconnected — finding next...");
+
+            try {
+              const res = await fetch("/api/matchmaking/join", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: currentUserId, category }),
+              });
+              const data = await res.json();
+              if (data.status === "matched") {
+                setAutoSearchStatus("Match found! Connecting...");
+                setTimeout(() => router.push(`/debate/${data.debateId}`), 800);
+              } else {
+                setAutoSearchStatus("Searching for opponent...");
+                setTimeout(() => router.push("/debate"), 800);
+              }
+            } catch {
+              setAutoSearchStatus("Searching for opponent...");
+              setTimeout(() => router.push("/debate"), 800);
+            }
           }
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(statusChannel); };
-  }, [debateId]);
+  }, [debateId, currentUserId, category, router]);
 
   const handleProposeTopic = () => {
     if (!proposedTopic.trim()) return;
@@ -488,40 +538,50 @@ export default function DebateRoom({
             )}
           </div>
 
-          {/* Debate ended banner — opponent left */}
-          {!isActive && status === "active" && (
+          {/* Auto-search overlay — Omegle-style instant reconnect */}
+          {isAutoSearching && (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 10,
-                padding: "8px 14px",
-                background: "rgba(239, 68, 68, 0.08)",
-                border: "1px solid rgba(239, 68, 68, 0.2)",
+                gap: 12,
+                padding: "10px 16px",
+                background: "rgba(16, 185, 129, 0.08)",
+                border: "1px solid rgba(16, 185, 129, 0.2)",
                 borderRadius: 8,
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#ef4444" }}>
-                Debate Ended
-              </span>
-              <span style={{ fontSize: 11, color: "var(--txt2)" }}>
-                {opponent.username} has left the debate
+              <div
+                style={{
+                  width: 16,
+                  height: 16,
+                  border: "2px solid transparent",
+                  borderTop: "2px solid #10b981",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                }}
+              />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#10b981" }}>
+                {autoSearchStatus}
               </span>
               <button
-                className="ctrl-btn next-btn"
-                onClick={handleSkip}
-                style={{ height: 30, fontSize: 11, padding: "0 12px" }}
+                onClick={() => {
+                  setIsAutoSearching(false);
+                  router.push("/");
+                }}
+                style={{
+                  fontSize: 11,
+                  padding: "4px 12px",
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 6,
+                  color: "var(--txt2)",
+                  cursor: "pointer",
+                }}
               >
-                Find Next
-              </button>
-              <button
-                className="ctrl-btn leave-btn"
-                onClick={handleLeave}
-                style={{ height: 30, fontSize: 11, padding: "0 12px" }}
-              >
-                Leave
+                Stop
               </button>
             </div>
           )}
@@ -579,25 +639,25 @@ export default function DebateRoom({
             {isActive && (
               <ReportButton reportedUserId={opponent.id} reportedUsername={opponent.username} debateId={debateId} />
             )}
-            {isActive ? (
-              <button className="ctrl-btn danger" onClick={handleEndDebate} title="End debate">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            ) : (
+            {isActive && !isAutoSearching ? (
+              <>
+                <button className="ctrl-btn danger" onClick={handleEndDebate} title="End debate">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+                <button className="ctrl-btn next-btn" onClick={handleSkip}>
+                  <span>Next</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 4 15 12 5 20 5 4" />
+                    <line x1="19" y1="5" x2="19" y2="19" />
+                  </svg>
+                </button>
+              </>
+            ) : !isAutoSearching ? (
               <button className="ctrl-btn leave-btn" onClick={handleLeave}>Leave</button>
-            )}
-            {isActive && (
-              <button className="ctrl-btn next-btn" onClick={handleSkip}>
-                <span>Next</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 4 15 12 5 20 5 4" />
-                  <line x1="19" y1="5" x2="19" y2="19" />
-                </svg>
-              </button>
-            )}
+            ) : null}
           </div>
 
           {/* Dev mode indicator */}
