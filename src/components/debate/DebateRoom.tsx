@@ -10,6 +10,7 @@ import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
 import LiveKitVideo from "./LiveKitVideo";
 import ClipRecorder from "./ClipRecorder";
+import NSFWGuard from "./NSFWGuard";
 import "@/styles/debate-room.css";
 
 // ===== FACT CHECK DATA =====
@@ -109,6 +110,7 @@ export default function DebateRoom({
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const videoGridRef = useRef<HTMLDivElement>(null);
+  const localVideoContainerRef = useRef<HTMLDivElement>(null);
 
   const isUserA = currentUserId === userA.id;
   const me = isUserA ? userA : userB;
@@ -402,6 +404,15 @@ export default function DebateRoom({
     >
       {({ localVideoEl, remoteVideoEl, isCamOn, isMicOn, toggleCam, toggleMic }) => (
     <div className="debate-room-wrapper">
+      {/* NSFW Content Detection — monitors local camera feed */}
+      <NSFWGuard
+        debateId={debateId}
+        userId={currentUserId}
+        isCamOn={isCamOn}
+        toggleCam={toggleCam}
+        onViolation={handleEndDebate}
+        localVideoContainerRef={localVideoContainerRef}
+      />
       <div className="debate-room">
         {/* ===== VIDEO AREA ===== */}
         <div className="video-area">
@@ -427,7 +438,7 @@ export default function DebateRoom({
             {/* MY VIDEO PANEL */}
             <div className="video-panel">
               {localVideoEl && isCamOn ? (
-                <div style={{ width: "100%", height: "100%" }}>{localVideoEl}</div>
+                <div ref={localVideoContainerRef} style={{ width: "100%", height: "100%" }}>{localVideoEl}</div>
               ) : (
                 <div className="video-placeholder">
                   <div className="video-placeholder-avatar" style={{ background: myStanceColor }}>{me.username[0]?.toUpperCase()}</div>
