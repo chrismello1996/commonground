@@ -4,7 +4,6 @@ import { useEffect, useRef, useCallback, useState } from "react";
 
 // NSFWJS model loaded lazily
 let nsfwModel: unknown = null;
-let modelLoading = false;
 let modelLoadPromise: Promise<unknown> | null = null;
 
 // Dynamically import nsfwjs (only in browser)
@@ -12,7 +11,6 @@ async function loadModel() {
   if (nsfwModel) return nsfwModel;
   if (modelLoadPromise) return modelLoadPromise;
 
-  modelLoading = true;
   modelLoadPromise = (async () => {
     try {
       // Dynamic imports — only load in browser
@@ -26,15 +24,16 @@ async function loadModel() {
       await tf.setBackend("webgl");
       await tf.ready();
 
+      // Load MobileNetV2 model from the public CDN instead of the bundled
+      // version. This avoids webpack trying to bundle the 30MB+ model shard
+      // files (which contain dynamic require() calls that break the build).
       const model = await nsfwjs.load(
-        "MobileNetV2",
-        { size: 224 } // Smaller input = faster inference
+        "https://nsfwjs.com/quant_nsfw_mobilenet/",
+        { size: 224, type: "graph" }
       );
       nsfwModel = model;
-      modelLoading = false;
       return model;
     } catch {
-      modelLoading = false;
       modelLoadPromise = null;
       return null;
     }

@@ -20,7 +20,8 @@ interface NSFWGuardProps {
 
 export default function NSFWGuard({
   debateId,
-  userId,
+  // userId is available for future use (e.g., server-side logging)
+  userId: _userId,
   isCamOn,
   toggleCam,
   onViolation,
@@ -66,7 +67,7 @@ export default function NSFWGuard({
     }
   }, [debateId, toggleCam, onViolation]);
 
-  const { setVideoElement, isScanning, isViolation } = useNSFWDetection({
+  const { setVideoElement } = useNSFWDetection({
     enabled: isCamOn,
     intervalMs: 3000,
     threshold: 0.70,

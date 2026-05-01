@@ -1,3 +1,6 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack: (config, { isServer }) => {
@@ -7,15 +10,17 @@ const nextConfig = {
       config.externals.push("nsfwjs", "@tensorflow/tfjs");
     }
 
-    // nsfwjs bundles model weight shards as UMD files with dynamic require()
-    // that webpack cannot statically analyse. We load the MobileNetV2 model
-    // from CDN at runtime via nsfwjs.load("MobileNetV2"), so these bundled
-    // model files don't need to be parsed by webpack.
-    config.module = config.module || {};
-    config.module.noParse = [
-      ...(Array.isArray(config.module.noParse) ? config.module.noParse : []),
-      /nsfwjs[\\/]dist[\\/]models/,
-    ];
+    // We load the NSFW model from CDN at runtime, so the bundled model
+    // weight files (30MB+ of UMD shards with dynamic require()) are not
+    // needed. Alias the model_imports to empty modules so webpack never
+    // tries to parse or bundle them.
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      [require.resolve("nsfwjs/dist/esm/model_imports/inception_v3.js")]: false,
+      [require.resolve("nsfwjs/dist/esm/model_imports/mobilenet_v2.js")]: false,
+      [require.resolve("nsfwjs/dist/esm/model_imports/mobilenet_v2_mid.js")]: false,
+    };
 
     return config;
   },

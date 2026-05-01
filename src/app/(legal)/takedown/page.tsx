@@ -2,10 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Metadata } from "next";
-
-// Note: metadata export doesn't work in client components,
-// so we use a separate layout or head component if needed
 
 export default function TakedownPage() {
   const [form, setForm] = useState({
