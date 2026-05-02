@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import StancePicker from "@/components/debate/StancePicker";
+import CountryPicker from "@/components/profile/CountryPicker";
 
 export default async function StancesPage() {
   const supabase = await createClient();
@@ -21,6 +22,13 @@ export default async function StancesPage() {
     existingStances[s.category] = s.stance;
   });
 
+  // Fetch current country
+  const { data: profile } = await supabase
+    .from("users")
+    .select("country")
+    .eq("id", user.id)
+    .single();
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
@@ -30,6 +38,7 @@ export default async function StancesPage() {
           opponents who disagree.
         </p>
       </div>
+      <CountryPicker userId={user.id} currentCountry={profile?.country || null} />
       <StancePicker userId={user.id} existingStances={existingStances} />
     </div>
   );

@@ -77,7 +77,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
   // Get user profiles
   const { data: users } = await supabase
     .from("users")
-    .select("id, username, display_name, avatar_url, elo")
+    .select("id, username, display_name, avatar_url, elo, country")
     .in("id", [debate.user_a, debate.user_b]);
 
   const userA = users?.find((u) => u.id === debate.user_a);
@@ -147,6 +147,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
         elo: userA?.elo || 1200,
         color: colorA,
         stance: stanceA,
+        country: userA?.country || null,
       }}
       userB={{
         id: debate.user_b,
@@ -154,6 +155,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
         elo: userB?.elo || 1200,
         color: colorB,
         stance: stanceB,
+        country: userB?.country || null,
       }}
       initialVotesA={votesA}
       initialVotesB={votesB}

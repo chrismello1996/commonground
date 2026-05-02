@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ProfileTabs from "./ProfileTabs";
 import ChallengeButton from "@/components/challenges/ChallengeButton";
+import { countryFlag, countryName } from "@/utils/countries";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -91,6 +92,11 @@ export default async function ProfilePage({
             </h2>
             <p className="text-gray-500 text-sm flex items-center gap-1.5">
               @{profile.username}
+              {profile.country && (
+                <span title={countryName(profile.country)} className="text-base leading-none">
+                  {countryFlag(profile.country)}
+                </span>
+              )}
               <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
                 eloRank === "gold"
                   ? "bg-amber-800/20 text-amber-800"

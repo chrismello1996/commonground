@@ -3,6 +3,7 @@ export interface User {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  country: string | null;
   elo: number;
   coins: number;
   created_at: string;

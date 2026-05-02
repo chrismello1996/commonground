@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 // livekit-client types used by LiveKitVideo component
 import { STANCE_OPTIONS } from "@/utils/constants";
+import { countryFlag } from "@/utils/countries";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";
 import ReportButton from "./ReportButton";
@@ -46,6 +47,7 @@ interface DebateUser {
   elo: number;
   stance: string;
   stanceCategory?: string;
+  country?: string | null;
 }
 
 interface DebateRoomProps {
@@ -451,6 +453,7 @@ export default function DebateRoom({
               <div className="video-label-row">
                 <Link href={`/profile/${me.username}`} className="video-label video-label-link">
                   <span className="video-label-dot" style={{ background: "var(--green)" }} />
+                  {me.country && <span style={{ fontSize: 14, marginRight: 2 }}>{countryFlag(me.country)}</span>}
                   {me.username}
                   <span className={`elo-badge ${getEloRank(me.elo)}`}>{me.elo}</span>
                 </Link>
@@ -482,6 +485,7 @@ export default function DebateRoom({
               <div className="video-label-row">
                 <Link href={`/profile/${opponent.username}`} className="video-label video-label-link">
                   <span className="video-label-dot" style={{ background: "var(--red)" }} />
+                  {opponent.country && <span style={{ fontSize: 14, marginRight: 2 }}>{countryFlag(opponent.country)}</span>}
                   {opponent.username}
                   <span className={`elo-badge ${getEloRank(opponent.elo)}`}>{opponent.elo}</span>
                 </Link>

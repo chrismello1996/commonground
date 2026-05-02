@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { STANCE_OPTIONS } from "@/utils/constants";
+import { countryFlag } from "@/utils/countries";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "@/components/debate/DebateChat";
 import LiveKitVideo from "@/components/debate/LiveKitVideo";
@@ -24,6 +25,7 @@ interface WatchClientProps {
     elo: number;
     color: string;
     stance: string;
+    country?: string | null;
   };
   userB: {
     id: string;
@@ -31,6 +33,7 @@ interface WatchClientProps {
     elo: number;
     color: string;
     stance: string;
+    country?: string | null;
   };
   initialVotesA: number;
   initialVotesB: number;
@@ -216,6 +219,7 @@ export default function WatchClient({
                   <div className="video-label-row">
                     <Link href={`/profile/${userA.username}`} className="video-label video-label-link">
                       <span className="video-label-dot" style={{ background: "var(--green)" }} />
+                      {userA.country && <span style={{ fontSize: 14, marginRight: 2 }}>{countryFlag(userA.country)}</span>}
                       {userA.username}
                       <span className={`elo-badge ${getEloRank(userA.elo)}`}>{userA.elo}</span>
                     </Link>
@@ -247,6 +251,7 @@ export default function WatchClient({
                   <div className="video-label-row">
                     <Link href={`/profile/${userB.username}`} className="video-label video-label-link">
                       <span className="video-label-dot" style={{ background: "var(--red)" }} />
+                      {userB.country && <span style={{ fontSize: 14, marginRight: 2 }}>{countryFlag(userB.country)}</span>}
                       {userB.username}
                       <span className={`elo-badge ${getEloRank(userB.elo)}`}>{userB.elo}</span>
                     </Link>

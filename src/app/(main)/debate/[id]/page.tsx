@@ -32,7 +32,7 @@ export default async function DebatePage({ params }: DebatePageProps) {
   // Get both user profiles
   const { data: users } = await supabase
     .from("users")
-    .select("id, username, display_name, avatar_url, elo")
+    .select("id, username, display_name, avatar_url, elo, country")
     .in("id", [debate.user_a, debate.user_b]);
 
   const userA = users?.find((u) => u.id === debate.user_a);
@@ -71,6 +71,7 @@ export default async function DebatePage({ params }: DebatePageProps) {
           elo: userA?.elo || 1200,
           stance: stanceDataA.stance,
           stanceCategory: stanceDataA.stanceCategory,
+          country: userA?.country || null,
         }}
         userB={{
           id: debate.user_b,
@@ -80,6 +81,7 @@ export default async function DebatePage({ params }: DebatePageProps) {
           elo: userB?.elo || 1200,
           stance: stanceDataB.stance,
           stanceCategory: stanceDataB.stanceCategory,
+          country: userB?.country || null,
         }}
       />
     </div>
