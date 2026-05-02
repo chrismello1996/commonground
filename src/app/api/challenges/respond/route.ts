@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         category: "anything",
         topic: "Open debate — discuss anything!",
         status: "active",
-        format: challenge.format || "open_mic",
+        format: challenge.format || "unstructured",
       })
       .select()
       .single();

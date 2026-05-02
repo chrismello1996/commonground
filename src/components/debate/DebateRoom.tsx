@@ -567,7 +567,7 @@ export default function DebateRoom({
                 <span className="topic-label">Topic</span>
                 <span className="topic-text">{debateTopic}</span>
                 {format && (() => {
-                  const fmt = DEBATE_FORMATS.find((f) => f.id === format);
+                  const fmt = Object.values(DEBATE_FORMATS).find((f) => f.id === format);
                   return fmt ? (
                     <span
                       style={{
@@ -591,7 +591,7 @@ export default function DebateRoom({
                 <span className="topic-label">No topic set</span>
                 <span className="topic-text" style={{ color: "var(--muted)", fontStyle: "italic" }}>Propose a topic below</span>
                 {format && (() => {
-                  const fmt = DEBATE_FORMATS.find((f) => f.id === format);
+                  const fmt = Object.values(DEBATE_FORMATS).find((f) => f.id === format);
                   return fmt ? (
                     <span
                       style={{

@@ -29,7 +29,7 @@ export default function ChallengePage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState("open_mic");
+  const [selectedFormat, setSelectedFormat] = useState("unstructured");
   const [pending, setPending] = useState<{ incoming: Challenge[]; outgoing: Challenge[] }>({
     incoming: [],
     outgoing: [],
@@ -89,8 +89,9 @@ export default function ChallengePage() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  const formatList = Object.values(DEBATE_FORMATS);
   const getFormatInfo = (formatId: string | null) =>
-    DEBATE_FORMATS.find((f) => f.id === (formatId || "open_mic")) || DEBATE_FORMATS[0];
+    formatList.find((f) => f.id === (formatId || "unstructured")) || formatList[0];
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
@@ -101,7 +102,7 @@ export default function ChallengePage() {
       <div className="mb-6">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Debate Format</h3>
         <div className="grid grid-cols-2 gap-2">
-          {DEBATE_FORMATS.map((fmt) => {
+          {formatList.map((fmt) => {
             const isSelected = selectedFormat === fmt.id;
             return (
               <button

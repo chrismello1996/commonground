@@ -1,35 +1,3 @@
-// Debate format options
-export const DEBATE_FORMATS = [
-  {
-    id: "open_mic",
-    label: "Open Mic",
-    description: "Unstructured free-flowing conversation. No rules, no time limits — just talk.",
-    icon: "🎤",
-    color: "#10b981",
-  },
-  {
-    id: "standard",
-    label: "Standard Debate",
-    description: "Structured back-and-forth with opening statements, rebuttals, and closing arguments.",
-    icon: "⚖️",
-    color: "#3b82f6",
-  },
-  {
-    id: "quickfire",
-    label: "Quickfire",
-    description: "Fast-paced rapid rounds. Short speaking turns, quick rebuttals, high energy.",
-    icon: "⚡",
-    color: "#f59e0b",
-  },
-  {
-    id: "lincoln_douglas",
-    label: "Lincoln-Douglas",
-    description: "Classic one-on-one format focused on values. Affirmative vs Negative with cross-examination.",
-    icon: "🏛️",
-    color: "#8b5cf6",
-  },
-] as const;
-
 // Category tags for debate topics
 export const CATEGORY_TAGS = [
   { id: "anything", label: "Anything Goes", icon: "🗣️" },
@@ -471,6 +439,7 @@ export const DEBATE_FORMATS = {
     id: "unstructured",
     label: "Open Mic",
     icon: "🎙️",
+    color: "#10b981",
     description: "No rules. Talk over each other. Pure chaos.",
     rounds: null,
     totalTime: null,
@@ -479,6 +448,7 @@ export const DEBATE_FORMATS = {
     id: "standard",
     label: "Standard Debate",
     icon: "⚖️",
+    color: "#3b82f6",
     description: "Opening → Rebuttals → Cross-exam → Closing",
     rounds: [
       { name: "Opening Statement", speaker: "A", duration: 120, description: "Side A presents their position" },
@@ -495,6 +465,7 @@ export const DEBATE_FORMATS = {
     id: "quick",
     label: "Quick Fire",
     icon: "⚡",
+    color: "#f59e0b",
     description: "2-min rounds. Fast. No filler.",
     rounds: [
       { name: "Side A Speaks", speaker: "A", duration: 120, description: "Make your case" },
@@ -509,6 +480,7 @@ export const DEBATE_FORMATS = {
     id: "lincoln",
     label: "Lincoln-Douglas",
     icon: "🎩",
+    color: "#8b5cf6",
     description: "Classic format. Long-form. For serious debaters.",
     rounds: [
       { name: "Affirmative Constructive", speaker: "A", duration: 360, description: "Build your full argument" },

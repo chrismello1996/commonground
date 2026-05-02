@@ -54,7 +54,7 @@ export async function POST(req: Request) {
         challenger_id: user.id,
         challenged_id: challengedId,
         message: message || null,
-        format: format || "open_mic",
+        format: format || "unstructured",
         expires_at: expiresAt,
       })
       .select()

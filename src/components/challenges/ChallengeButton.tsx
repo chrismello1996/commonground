@@ -22,7 +22,7 @@ export default function ChallengeButton({ targetUserId, targetUsername, format }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           challengedId: targetUserId,
-          format: format || "open_mic",
+          format: format || "unstructured",
         }),
       });
       const data = await res.json();

@@ -63,7 +63,7 @@ export default async function DebatePage({ params }: DebatePageProps) {
         topic={debate.topic}
         category={debate.category}
         status={debate.status}
-        format={debate.format || "open_mic"}
+        format={debate.format || "unstructured"}
         userA={{
           id: debate.user_a,
           username: userA?.username || "Unknown",
