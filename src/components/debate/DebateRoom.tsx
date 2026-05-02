@@ -12,6 +12,7 @@ import ReportButton from "./ReportButton";
 import LiveKitVideo from "./LiveKitVideo";
 import ClipRecorder from "./ClipRecorder";
 import NSFWGuard from "./NSFWGuard";
+import DebateRoundManager from "./DebateRoundManager";
 import "@/styles/debate-room.css";
 
 // ===== FACT CHECK DATA =====
@@ -397,6 +398,10 @@ export default function DebateRoom({
   const hasMyStance = me.stance !== "unknown" && me.stance !== "";
   const hasOpponentStance = opponent.stance !== "unknown" && opponent.stance !== "";
 
+  // Structured debate format
+  const formatConfig = format ? DEBATE_FORMATS[format as keyof typeof DEBATE_FORMATS] : null;
+  const isStructured = formatConfig && formatConfig.rounds && formatConfig.rounds.length > 0;
+
   return (
     <LiveKitVideo
       debateId={debateId}
@@ -559,6 +564,25 @@ export default function DebateRoom({
             <span>{totalVotes} vote{totalVotes !== 1 ? "s" : ""}</span>
             <span className="vote-count-right">{debateVotesB}</span>
           </div>
+
+          {/* Structured Debate Round Manager */}
+          {isActive && isStructured && formatConfig && (
+            <DebateRoundManager
+              debateId={debateId}
+              rounds={formatConfig.rounds!}
+              formatLabel={formatConfig.label}
+              formatIcon={formatConfig.icon}
+              formatColor={formatConfig.color}
+              totalTime={formatConfig.totalTime!}
+              isUserA={isUserA}
+              currentUserId={currentUserId}
+              userAUsername={userA.username}
+              userBUsername={userB.username}
+              isMicOn={isMicOn}
+              toggleMic={toggleMic}
+              onDebateEnd={handleEndDebate}
+            />
+          )}
 
           {/* Topic banner with propose/accept */}
           <div className="topic-banner-wrap">
