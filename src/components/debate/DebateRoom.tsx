@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 // livekit-client types used by LiveKitVideo component
-import { STANCE_OPTIONS } from "@/utils/constants";
+import { STANCE_OPTIONS, DEBATE_FORMATS } from "@/utils/constants";
 import { countryFlag } from "@/utils/countries";
 import { createClient } from "@/lib/supabase/client";
 import DebateChat from "./DebateChat";
@@ -56,6 +56,7 @@ interface DebateRoomProps {
   topic: string;
   category: string;
   status: string;
+  format?: string;
   userA: DebateUser;
   userB: DebateUser;
 }
@@ -83,6 +84,7 @@ export default function DebateRoom({
   topic,
   category,
   status,
+  format,
   userA,
   userB,
 }: DebateRoomProps) {
@@ -564,11 +566,49 @@ export default function DebateRoom({
               <div className="topic-banner">
                 <span className="topic-label">Topic</span>
                 <span className="topic-text">{debateTopic}</span>
+                {format && (() => {
+                  const fmt = DEBATE_FORMATS.find((f) => f.id === format);
+                  return fmt ? (
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        background: `${fmt.color}18`,
+                        color: fmt.color,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {fmt.icon} {fmt.label}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             ) : (
               <div className="topic-banner">
                 <span className="topic-label">No topic set</span>
                 <span className="topic-text" style={{ color: "var(--muted)", fontStyle: "italic" }}>Propose a topic below</span>
+                {format && (() => {
+                  const fmt = DEBATE_FORMATS.find((f) => f.id === format);
+                  return fmt ? (
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        background: `${fmt.color}18`,
+                        color: fmt.color,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {fmt.icon} {fmt.label}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             )}
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import ChallengeButton from "@/components/challenges/ChallengeButton";
+import { DEBATE_FORMATS } from "@/utils/constants";
 
 interface UserResult {
   id: string;
@@ -17,6 +18,7 @@ interface Challenge {
   challenged_id: string;
   status: string;
   message: string | null;
+  format: string | null;
   expires_at: string;
   created_at: string;
   challenger: { username: string; elo: number };
@@ -27,6 +29,7 @@ export default function ChallengePage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState("open_mic");
   const [pending, setPending] = useState<{ incoming: Challenge[]; outgoing: Challenge[] }>({
     incoming: [],
     outgoing: [],
@@ -86,10 +89,46 @@ export default function ChallengePage() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  const getFormatInfo = (formatId: string | null) =>
+    DEBATE_FORMATS.find((f) => f.id === (formatId || "open_mic")) || DEBATE_FORMATS[0];
+
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <h1 className="text-2xl font-extrabold mb-1">Challenge a Debater</h1>
       <p className="text-sm text-gray-400 mb-6">Search for a user and challenge them to a live debate</p>
+
+      {/* Debate Format Selector */}
+      <div className="mb-6">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Debate Format</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {DEBATE_FORMATS.map((fmt) => {
+            const isSelected = selectedFormat === fmt.id;
+            return (
+              <button
+                key={fmt.id}
+                onClick={() => setSelectedFormat(fmt.id)}
+                className="text-left p-3 rounded-xl border transition-all"
+                style={{
+                  background: isSelected ? `${fmt.color}08` : "#fafafa",
+                  borderColor: isSelected ? `${fmt.color}40` : "#e5e7eb",
+                  boxShadow: isSelected ? `0 0 0 1px ${fmt.color}20` : "none",
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base">{fmt.icon}</span>
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: isSelected ? fmt.color : "#374151" }}
+                  >
+                    {fmt.label}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-snug text-gray-400">{fmt.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Search */}
       <div className="relative mb-6">
@@ -140,7 +179,11 @@ export default function ChallengePage() {
                       </span>
                     </p>
                   </div>
-                  <ChallengeButton targetUserId={user.id} targetUsername={user.username} />
+                  <ChallengeButton
+                    targetUserId={user.id}
+                    targetUsername={user.username}
+                    format={selectedFormat}
+                  />
                 </div>
               );
             })}
@@ -157,62 +200,90 @@ export default function ChallengePage() {
         <div>
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Pending Challenges</h3>
 
-          {pending.incoming.map((c) => (
-            <div key={c.id} className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-xl mb-2">
-              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                {c.challenger.username[0]?.toUpperCase()}
+          {pending.incoming.map((c) => {
+            const fmt = getFormatInfo(c.format);
+            return (
+              <div key={c.id} className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-xl mb-2">
+                <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                  {c.challenger.username[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {c.challenger.username} <span className="text-gray-400 font-normal text-xs">challenged you</span>
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                      style={{
+                        background: `${fmt.color}15`,
+                        color: fmt.color,
+                      }}
+                    >
+                      {fmt.icon} {fmt.label}
+                    </span>
+                    <span className="text-[10px] text-gray-400">expires in {timeLeft(c.expires_at)}</span>
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={async () => {
+                      const res = await fetch("/api/challenges/respond", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ challengeId: c.id, action: "accept" }),
+                      });
+                      const data = await res.json();
+                      if (data.debateId) window.location.href = `/debate/${data.debateId}`;
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/challenges/respond", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ challengeId: c.id, action: "decline" }),
+                      });
+                      fetchPending();
+                    }}
+                    className="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-gray-600 hover:bg-gray-100 transition border border-gray-200"
+                  >
+                    Decline
+                  </button>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-800">
-                  {c.challenger.username} <span className="text-gray-400 font-normal text-xs">challenged you</span>
-                </p>
-                <p className="text-[10px] text-gray-400">Expires in {timeLeft(c.expires_at)}</p>
-              </div>
-              <div className="flex gap-1.5">
-                <button
-                  onClick={async () => {
-                    const res = await fetch("/api/challenges/respond", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ challengeId: c.id, action: "accept" }),
-                    });
-                    const data = await res.json();
-                    if (data.debateId) window.location.href = `/debate/${data.debateId}`;
-                  }}
-                  className="px-3 py-1.5 text-xs font-bold rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition"
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={async () => {
-                    await fetch("/api/challenges/respond", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ challengeId: c.id, action: "decline" }),
-                    });
-                    fetchPending();
-                  }}
-                  className="px-3 py-1.5 text-xs font-bold rounded-md bg-white text-gray-600 hover:bg-gray-100 transition border border-gray-200"
-                >
-                  Decline
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
-          {pending.outgoing.map((c) => (
-            <div key={c.id} className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl mb-2">
-              <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                {c.challenged.username[0]?.toUpperCase()}
+          {pending.outgoing.map((c) => {
+            const fmt = getFormatInfo(c.format);
+            return (
+              <div key={c.id} className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl mb-2">
+                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                  {c.challenged.username[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-800">
+                    Sent to <span className="text-emerald-600">{c.challenged.username}</span>
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                      style={{
+                        background: `${fmt.color}15`,
+                        color: fmt.color,
+                      }}
+                    >
+                      {fmt.icon} {fmt.label}
+                    </span>
+                    <span className="text-[10px] text-gray-400">waiting... · expires in {timeLeft(c.expires_at)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-800">
-                  Sent to <span className="text-emerald-600">{c.challenged.username}</span>
-                </p>
-                <p className="text-[10px] text-gray-400">Waiting... · expires in {timeLeft(c.expires_at)}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

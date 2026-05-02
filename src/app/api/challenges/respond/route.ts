@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: "declined" });
     }
 
-    // Accept — create a debate
+    // Accept — create a debate with the challenge's format
     const { data: debate, error: debateError } = await supabase
       .from("debates")
       .insert({
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         category: "anything",
         topic: "Open debate — discuss anything!",
         status: "active",
-        format: "1v1",
+        format: challenge.format || "open_mic",
       })
       .select()
       .single();

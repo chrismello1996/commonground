@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { challengedId, message } = await req.json();
+    const { challengedId, message, format } = await req.json();
 
     if (!challengedId) {
       return NextResponse.json({ error: "Missing challengedId" }, { status: 400 });
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
         challenger_id: user.id,
         challenged_id: challengedId,
         message: message || null,
+        format: format || "open_mic",
         expires_at: expiresAt,
       })
       .select()

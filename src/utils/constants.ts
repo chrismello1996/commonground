@@ -1,3 +1,35 @@
+// Debate format options
+export const DEBATE_FORMATS = [
+  {
+    id: "open_mic",
+    label: "Open Mic",
+    description: "Unstructured free-flowing conversation. No rules, no time limits — just talk.",
+    icon: "🎤",
+    color: "#10b981",
+  },
+  {
+    id: "standard",
+    label: "Standard Debate",
+    description: "Structured back-and-forth with opening statements, rebuttals, and closing arguments.",
+    icon: "⚖️",
+    color: "#3b82f6",
+  },
+  {
+    id: "quickfire",
+    label: "Quickfire",
+    description: "Fast-paced rapid rounds. Short speaking turns, quick rebuttals, high energy.",
+    icon: "⚡",
+    color: "#f59e0b",
+  },
+  {
+    id: "lincoln_douglas",
+    label: "Lincoln-Douglas",
+    description: "Classic one-on-one format focused on values. Affirmative vs Negative with cross-examination.",
+    icon: "🏛️",
+    color: "#8b5cf6",
+  },
+] as const;
+
 // Category tags for debate topics
 export const CATEGORY_TAGS = [
   { id: "anything", label: "Anything Goes", icon: "🗣️" },

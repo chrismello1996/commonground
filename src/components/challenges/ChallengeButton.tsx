@@ -5,9 +5,10 @@ import { useState } from "react";
 interface ChallengeButtonProps {
   targetUserId: string;
   targetUsername: string;
+  format?: string;
 }
 
-export default function ChallengeButton({ targetUserId, targetUsername }: ChallengeButtonProps) {
+export default function ChallengeButton({ targetUserId, targetUsername, format }: ChallengeButtonProps) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
 
@@ -19,7 +20,10 @@ export default function ChallengeButton({ targetUserId, targetUsername }: Challe
       const res = await fetch("/api/challenges/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ challengedId: targetUserId }),
+        body: JSON.stringify({
+          challengedId: targetUserId,
+          format: format || "open_mic",
+        }),
       });
       const data = await res.json();
 
