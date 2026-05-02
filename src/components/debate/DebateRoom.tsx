@@ -145,11 +145,21 @@ export default function DebateRoom({
   useEffect(() => {
     const endOnUnload = () => {
       if (isActive) {
-        // Use sendBeacon for reliable delivery during page unload
-        navigator.sendBeacon(
-          "/api/debate/end",
-          new Blob([JSON.stringify({ debateId })], { type: "application/json" })
-        );
+        // Use fetch with keepalive instead of sendBeacon — keepalive sends cookies/credentials
+        // which sendBeacon may not include, causing auth failures on the API route
+        fetch("/api/debate/end", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ debateId }),
+          keepalive: true,
+          credentials: "same-origin",
+        }).catch(() => {
+          // Last resort fallback — try sendBeacon if fetch fails
+          navigator.sendBeacon(
+            "/api/debate/end",
+            new Blob([JSON.stringify({ debateId })], { type: "application/json" })
+          );
+        });
       }
     };
     window.addEventListener("beforeunload", endOnUnload);
@@ -409,6 +419,12 @@ export default function DebateRoom({
       onDevMode={() => setDevMode(true)}
       onConnectionChange={(connected, viewers) => {
         setDebateViewers(viewers);
+      }}
+      onParticipantDisconnect={(identity) => {
+        // If the opponent left the LiveKit room, end the debate immediately
+        if (identity === opponent.id && isActive) {
+          triggerAutoSearch();
+        }
       }}
     >
       {({ localVideoEl, remoteVideoEl, isCamOn, isMicOn, toggleCam, toggleMic }) => (

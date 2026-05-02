@@ -31,6 +31,8 @@ interface LiveKitVideoProps {
   isParticipant: boolean;
   /** Called when connection state changes */
   onConnectionChange?: (connected: boolean, viewerCount: number) => void;
+  /** Called when a remote participant disconnects (identity string passed) */
+  onParticipantDisconnect?: (identity: string) => void;
   /** Called when devMode is detected (no LiveKit credentials configured) */
   onDevMode?: () => void;
   /** Render prop: receives local and remote video elements + connection info */
@@ -41,10 +43,12 @@ function LiveKitVideoInner({
   isParticipant,
   children,
   onConnectionChange,
+  onParticipantDisconnect,
 }: {
   isParticipant: boolean;
   children: LiveKitVideoProps["children"];
   onConnectionChange?: LiveKitVideoProps["onConnectionChange"];
+  onParticipantDisconnect?: LiveKitVideoProps["onParticipantDisconnect"];
 }) {
   const connectionState = useConnectionState();
   const isConnected = connectionState === ConnectionState.Connected;
@@ -123,6 +127,24 @@ function LiveKitVideoInner({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, viewerCount]);
 
+  // Detect when a remote participant disconnects
+  const prevRemoteIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isConnected) return;
+    const currentIds = new Set(remoteParticipants.map((p) => p.identity));
+    const prevIds = prevRemoteIdsRef.current;
+
+    // Check if any previously-seen participant is now gone
+    Array.from(prevIds).forEach((id) => {
+      if (!currentIds.has(id)) {
+        onParticipantDisconnect?.(id);
+      }
+    });
+
+    prevRemoteIdsRef.current = currentIds;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, remoteParticipants]);
+
   const toggleCam = async () => {
     if (!localParticipant) return;
     try {
@@ -195,6 +217,7 @@ export default function LiveKitVideo({
   debateId,
   isParticipant,
   onConnectionChange,
+  onParticipantDisconnect,
   onDevMode,
   children,
 }: LiveKitVideoProps) {
@@ -294,6 +317,7 @@ export default function LiveKitVideo({
       <LiveKitVideoInner
         isParticipant={isParticipant}
         onConnectionChange={onConnectionChange}
+        onParticipantDisconnect={onParticipantDisconnect}
       >
         {children}
       </LiveKitVideoInner>

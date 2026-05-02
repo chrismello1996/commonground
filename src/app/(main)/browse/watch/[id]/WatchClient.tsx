@@ -108,6 +108,28 @@ export default function WatchClient({
     return () => { supabase.removeChannel(channel); };
   }, [debate.id]);
 
+  // Polling fallback — check debate status every 3 seconds in case Realtime misses it
+  useEffect(() => {
+    if (isEnded) return;
+    const pollInterval = setInterval(async () => {
+      try {
+        const supabase = supabaseRef.current;
+        const { data } = await supabase
+          .from("debates")
+          .select("status")
+          .eq("id", debate.id)
+          .single();
+        if (data && data.status !== "active") {
+          setDebateStatus(data.status);
+          clearInterval(pollInterval);
+        }
+      } catch {
+        // Silently retry
+      }
+    }, 3000);
+    return () => clearInterval(pollInterval);
+  }, [debate.id, isEnded]);
+
   // Auto-advance to next debate when this one ends
   useEffect(() => {
     if (!isEnded || debate.status !== "active") return; // only trigger on real-time end, not initial load
