@@ -753,11 +753,13 @@ export default function DebateRoom({
             )}
             {isActive && !isAutoSearching ? (
               <>
-                <button className="ctrl-btn danger" onClick={handleEndDebate} title="End debate">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
+                <button className="ctrl-btn leave-btn" onClick={handleLeave} title="Leave debate">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
+                  <span>Leave</span>
                 </button>
                 <button className="ctrl-btn next-btn" onClick={handleSkip}>
                   <span>Next</span>
