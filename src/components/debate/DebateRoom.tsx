@@ -298,7 +298,21 @@ export default function DebateRoom({
     setIsActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
     setIsAutoSearching(true);
-    setAutoSearchStatus("Opponent disconnected — finding next...");
+    setAutoSearchStatus("Opponent disconnected — ending debate...");
+
+    // IMPORTANT: End the debate in the DB first — the person who left may not have
+    // successfully called /api/debate/end (e.g. sendBeacon auth failure on tab close)
+    try {
+      await fetch("/api/debate/end", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ debateId }),
+      });
+    } catch {
+      // Best effort — debate may already be ended by the other side
+    }
+
+    setAutoSearchStatus("Finding next opponent...");
 
     try {
       const res = await fetch("/api/matchmaking/join", {
@@ -318,9 +332,9 @@ export default function DebateRoom({
       setAutoSearchStatus("Searching for opponent...");
       setTimeout(() => router.push("/debate"), 800);
     }
-  }, [currentUserId, category, router]);
+  }, [debateId, currentUserId, category, router]);
 
-  // Poll debate status every 3 seconds as primary detection
+  // Poll debate status every 2 seconds as primary detection
   useEffect(() => {
     if (!isActive) return;
 
@@ -340,7 +354,7 @@ export default function DebateRoom({
       } catch {
         // Silently retry
       }
-    }, 3000);
+    }, 2000);
 
     return () => clearInterval(pollInterval);
   }, [debateId, isActive, triggerAutoSearch]);
