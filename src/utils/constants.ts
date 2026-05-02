@@ -194,6 +194,7 @@ export const STANCE_OPTIONS: Record<string, {
       { id: "calisthenics", label: "Calisthenics", color: "#0891b2" },
       { id: "antiVax", label: "Anti-Vax", color: "#6b7280" },
       { id: "proVax", label: "Pro-Vax", color: "#2563eb" },
+      { id: "looksmaxxing", label: "Looksmaxxing", color: "#e11d48" },
     ],
     opposites: {
       carnivore: ["vegan", "plantBased"],
@@ -208,6 +209,7 @@ export const STANCE_OPTIONS: Record<string, {
       calisthenics: ["bodybuilder", "crossfit"],
       antiVax: ["proVax", "modernMedicine"],
       proVax: ["antiVax", "naturalHealth"],
+      looksmaxxing: ["naturalHealth", "calisthenics"],
     },
   },
   education: {
@@ -344,6 +346,7 @@ export const DEBATE_TOPICS: Record<string, { general: string[]; stancePairs: Rec
       "antiVax|proVax": ["Should vaccines be mandatory?", "Do vaccine side effects outweigh the benefits?", "Is vaccine hesitancy based on science or fear?", "Should parents have the right to refuse vaccines for their kids?"],
       "bodybuilder|calisthenics": ["Do you need a gym to get strong?", "Is bodybuilding actually healthy?", "Are bodyweight exercises superior to weights?", "Is aesthetics or functionality more important?"],
       "crossfit|bodybuilder": ["Is CrossFit dangerous or effective?", "Does CrossFit produce better athletes than bodybuilding?", "Is functional fitness a myth?"],
+      "looksmaxxing|naturalHealth": ["Is looksmaxxing self-improvement or vanity?", "Are cosmetic procedures worth the risk?", "Is mewing actually backed by science?", "Does appearance really determine your success?", "Is the looksmaxxing community toxic or empowering?"],
     },
   },
   education: {
@@ -543,7 +546,7 @@ export const FACTION_MOTTOS: Record<string, string> = {
   // Health
   carnivore: "Meat is medicine", vegan: "Compassion on your plate", keto: "Fat is fuel", plantBased: "Eat from the earth",
   naturalHealth: "Nature knows best", modernMedicine: "Trust the science", biohacker: "Optimize everything", bodybuilder: "Iron therapy",
-  crossfit: "Forged in the WOD", calisthenics: "Your body is the gym", antiVax: "My body, my choice", proVax: "Protect the herd",
+  crossfit: "Forged in the WOD", calisthenics: "Your body is the gym", antiVax: "My body, my choice", proVax: "Protect the herd", looksmaxxing: "Ascend or cope",
   // Education
   collegeIsWorthIt: "Invest in your future", collegeIsAScam: "Debt is not a degree", tradeSchool: "Build something real", selfTaught: "Google is my professor",
   homeschool: "Kitchen table scholars", publicSchool: "Education for all", privateSchool: "Excellence has a price", unschooling: "Curiosity is the curriculum",
