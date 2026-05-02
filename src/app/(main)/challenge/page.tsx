@@ -98,6 +98,26 @@ export default function ChallengePage() {
       <h1 className="text-2xl font-extrabold mb-1">Challenge a Debater</h1>
       <p className="text-sm text-gray-400 mb-6">Search for a user and challenge them to a live debate</p>
 
+      {/* Search */}
+      <div className="relative mb-6">
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by username..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
+            autoFocus
+          />
+          {searching && (
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-emerald-500 rounded-full animate-spin" />
+          )}
+        </div>
+      </div>
+
       {/* Debate Format Selector */}
       <div className="mb-6">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Debate Format</h3>
@@ -128,26 +148,6 @@ export default function ChallengePage() {
               </button>
             );
           })}
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-6">
-        <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search by username..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
-            autoFocus
-          />
-          {searching && (
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-emerald-500 rounded-full animate-spin" />
-          )}
         </div>
       </div>
 
