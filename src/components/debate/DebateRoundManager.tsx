@@ -29,8 +29,6 @@ interface DebateRoundManagerProps {
 export default function DebateRoundManager({
   debateId,
   rounds,
-  formatLabel: _formatLabel,
-  formatIcon: _formatIcon,
   formatColor,
   isUserA,
   currentUserId,
