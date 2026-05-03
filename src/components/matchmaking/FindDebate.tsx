@@ -62,6 +62,7 @@ export default function FindDebate({ userId, username, elo }: FindDebateProps) {
     if (hasJoined.current) return;
     hasJoined.current = true;
     startSearching();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startSearching = useCallback(async () => {
@@ -147,6 +148,7 @@ export default function FindDebate({ userId, username, elo }: FindDebateProps) {
       setError("Network error. Please try again.");
       setState("error");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const cancelSearch = useCallback(async () => {

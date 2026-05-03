@@ -77,6 +77,7 @@ export default function DebateLobbyPage() {
       }
     }
     autoJoin();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Search timer & message rotation
@@ -117,6 +118,7 @@ export default function DebateLobbyPage() {
       }
     }, 3000);
     return () => clearInterval(pollInterval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, userId]);
 
   const retryQueue = useCallback(async () => {
@@ -161,6 +163,7 @@ export default function DebateLobbyPage() {
       setError("Network error. Please try again.");
       setStatus("error");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const leaveQueue = useCallback(async () => {
