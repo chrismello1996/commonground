@@ -93,6 +93,31 @@ export default async function BrowsePage() {
   const trendingTopics = aggregateTopics(recentDebates);
   const allTimeTopics = aggregateTopics(allDebates);
 
+  // Fetch faction member counts (how many users have each stance)
+  const { data: allStances } = await supabase
+    .from("user_stances")
+    .select("category, stance");
+
+  // Build faction stats: { [stanceId]: memberCount }
+  const factionCounts: Record<string, number> = {};
+  allStances?.forEach((s) => {
+    const key = `${s.category}:${s.stance}`;
+    factionCounts[key] = (factionCounts[key] || 0) + 1;
+  });
+
+  // Build faction data for client
+  const factionData = Object.entries(STANCE_OPTIONS).map(([catId, cat]) => ({
+    categoryId: catId,
+    categoryLabel: cat.label,
+    categoryIcon: cat.icon,
+    stances: cat.stances.map((s) => ({
+      id: s.id,
+      label: s.label,
+      color: s.color,
+      members: factionCounts[`${catId}:${s.id}`] || 0,
+    })),
+  }));
+
   // Helper functions
   const getUser = (id: string) => users?.find((u) => u.id === id);
   const getStance = (userId: string, category: string) =>
@@ -117,10 +142,12 @@ export default async function BrowsePage() {
       userA: {
         username: userA?.username || "Unknown",
         color: getStanceColor(debate.category, stanceA),
+        stance: stanceA,
       },
       userB: {
         username: userB?.username || "Unknown",
         color: getStanceColor(debate.category, stanceB),
+        stance: stanceB,
       },
       votesA: vc.a,
       votesB: vc.b,
@@ -133,6 +160,7 @@ export default async function BrowsePage() {
         debates={debateCards}
         trendingTopics={trendingTopics}
         allTimeTopics={allTimeTopics}
+        factions={factionData}
       />
     </div>
   );
